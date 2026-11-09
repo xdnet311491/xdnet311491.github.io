@@ -1,0 +1,48 @@
+{
+  "_メモ": "曲・壁紙・特殊モーションの一覧です。build.py を丸ごと差し替えてもこのファイルは消えません。1行が1件で、[\"画面に出る名前\", \"siryouの中のファイル名\", \"小さい説明(空でもOK)\"] の形です。増やすときは1行コピーして書き換えます。行の最後のカンマ、引用符(\")、かっこを消さないでください。op_motions は \"曲のファイル名\": \"動画のファイル名\" の形です。",
+  "wallpapers": [
+    ["1. mimori", "wallpaper.mp4", "最初の壁紙"],
+    ["2. serina", "wallpaper2.mp4", ""],
+    ["3. kei1", "wallpaper3.mp4", ""],
+    ["4. kei2", "wallpaper4.mp4", ""],
+    ["5. mary", "wallpaper5.mp4", ""],
+    ["6. jyunko", "wallpaper6.mp4", ""],
+    ["7. chise", "wallpaper7.mp4", ""],
+    ["8. shigure", "wallpaper8.mp4", ""],
+    ["9. miyako", "wallpaper9.mp4", ""],
+    ["10. azusa", "wallpaper10.mp4", ""]
+  ],
+  "main_songs": [
+    ["1. Unwelcome School(8bit remix)", "sound.mp3", "最初に流れる曲"],
+    ["2. Step by Step", "sound2.mp3", ""],
+    ["3. Romantic Smile", "sound3.mp3", ""],
+    ["4. Midsummer Cat", "sound4.mp3", ""],
+    ["5. Walktrought", "sound5.mp3", ""]
+  ],
+  "op_songs": [
+    ["1. Aoharu Band Arrange", "op1.mp3", "最初に流れる曲"],
+    ["諸事情により削除済", "op2.mp3", ""],
+    ["3. Rolling Beat", "op3.mp3", ""],
+    ["4. ユメ先輩(身内ノリでは牛込柳町パーククリニック)のテーマ", "op4.mp3", ""],
+    ["5. OperationD", "op5.mp3", ""],
+    ["6. Dreaming Trip", "op6.mp3", ""],
+    ["7. Welcome School", "op7.mp3", ""],
+    ["8. Our Oath", "op8.mp3", ""],
+    ["9. Alkaline tears", "op9.mp3", ""],
+    ["10. ﾕｳｶの絆ダイアローグ", "op10.mp3", ""],
+    ["11. 彩りキャンバス", "op11.mp3", ""]
+  ],
+  "op_motions": {
+    "op4.mp3": "motion4.mp4",
+    "op10.mp3": "motion10.mp4",
+    "op11.mp3": "motion11.mp4"
+  },
+  "visitor_counter": {
+      "enabled": true,
+      "namespace": "xdnet311491-xdnet311491-github-io",
+      "key": "visitors",
+      "hit_url": "https://abacus.jasoncameron.dev/hit/{ns}/{key}",
+      "get_url": "https://abacus.jasoncameron.dev/get/{ns}/{key}",
+    "offset": 1030
+  }
+}

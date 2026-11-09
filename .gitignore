@@ -1,0 +1,6 @@
+siryou_original/
+.shrink_tmp/
+__pycache__/
+.shrink_done.json
+dev_password.txt
+env.txt

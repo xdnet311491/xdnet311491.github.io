@@ -1,0 +1,1899 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1000, viewport-fit=cover">
+<script>
+(function () {
+  var W = 1000, m = document.querySelector('meta[name=viewport]');
+  if (!m || !window.matchMedia || !matchMedia('(pointer:coarse)').matches) return;
+  function fit() {
+    var p = matchMedia('(orientation:portrait)').matches;
+    var w = p ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
+    if (!w) return;
+    if (w >= W) { m.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover'); return; }
+    var s = w / W;
+    m.setAttribute('content', 'width=' + W + ', initial-scale=' + s.toFixed(4) +
+      ', minimum-scale=' + (s * 0.999).toFixed(4) + ', viewport-fit=cover');
+  }
+  fit();
+  try { matchMedia('(orientation:portrait)').addEventListener('change', function () { setTimeout(fit, 150); }); }
+  catch (e) { window.addEventListener('orientationchange', function () { setTimeout(fit, 250); }); }
+})();
+</script>
+<title>xdnet311491/internet archive☆</title>
+<meta name="build-id" content="ff0fb7a7f35e">
+<style>
+:root{--bg:#0a0e2a;--bg2:#141a45;--ink:#eef0ff;--dim:#9aa3d6;--line:#2b3470;--glow:#7df3ff;--gold:#ffe27a;color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg)}
+body{background:radial-gradient(120% 90% at 50% 0%,var(--bg2),var(--bg) 70%) fixed;color:var(--ink);
+  font-family:"Hiragino Sans","Yu Gothic","Meiryo",sans-serif;line-height:1.7;
+  -webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+.sr{position:fixed;opacity:0;pointer-events:none}
+
+/* ---------- 入場画面 ---------- */
+.gate{position:fixed;inset:0;z-index:50;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:1rem;cursor:pointer;
+  transition:opacity .7s ease,transform .7s ease,visibility 0s}
+.gt{font-size:clamp(2.4rem,10vw,5.5rem);font-weight:900;letter-spacing:.04em;
+  text-shadow:0 0 24px var(--glow),0 0 60px rgba(125,243,255,.35);animation:breathe 2.8s ease-in-out infinite}
+.gs{color:var(--dim);font-size:.95rem}
+.tap{display:none}
+@media (pointer:coarse){.tap{display:inline}.click{display:none}}
+@keyframes breathe{0%,100%{opacity:.75}50%{opacity:1}}
+#enter:checked ~ .gate{opacity:0;transform:scale(1.08);visibility:hidden;pointer-events:none;
+  transition:opacity .7s ease,transform .7s ease,visibility 0s .7s}
+#enter:focus-visible ~ .gate{outline:2px solid var(--gold);outline-offset:-8px}
+
+/* ---------- エフェクト用マス目 ---------- */
+.grid{position:fixed;inset:0;z-index:1;display:grid;
+  grid-template-columns:repeat(var(--cols),1fr);grid-template-rows:repeat(var(--rows),1fr)}
+.grid i{display:block;--h:190;position:relative}
+.grid i:nth-child(5n+1){--h:200}
+.grid i:nth-child(5n+2){--h:212}
+.grid i:nth-child(5n+3){--h:190}
+.grid i:nth-child(5n+4){--h:222}
+.grid i:nth-child(5n){--h:205}
+.grid i::before{content:"";position:absolute;inset:18%;border-radius:50%;
+  background:hsl(var(--h) 100% 72%);box-shadow:0 0 14px hsl(var(--h) 100% 70%);
+  transform:scale(0);opacity:0;transition:transform .9s ease-out,opacity .9s ease-out}
+/* 触れた瞬間はすぐ光り、離れるとゆっくり消える = 軌跡になる */
+.grid i:hover::before{transform:scale(1.7);opacity:.95;transition-duration:0s}
+.grid i:hover + i::before{transform:scale(1);opacity:.6;transition-duration:0s}
+/* タップ/クリック中は大きく弾ける */
+.grid i:active::before{transform:scale(6);opacity:1;transition-duration:0s}
+
+/* ---------- 本体 ---------- */
+main{position:relative;z-index:10;max-width:760px;margin:0;padding:1.2rem;padding-left:clamp(1.2rem,5vw,4rem);
+  padding-top:max(1.2rem,env(safe-area-inset-top));opacity:0;transition:opacity .9s ease .2s;
+  pointer-events:none}
+#enter:checked ~ main{opacity:1}
+main a,main label{pointer-events:auto}
+h1{margin:0 0 .8rem;font-size:1.7rem;font-weight:900;letter-spacing:.03em}
+.tabs{display:flex;gap:.4rem;border-bottom:1px solid var(--line)}
+.tabs label{padding:.6rem 1rem;color:var(--dim);font-weight:700;cursor:pointer;
+  border-bottom:3px solid transparent;margin-bottom:-1px}
+#t-home:checked ~ main label[for=t-home],
+#t-pages:checked ~ main label[for=t-pages],
+#t-channels:checked ~ main label[for=t-channels]{color:var(--ink);border-bottom-color:var(--glow)}
+.panel{display:none;padding:1.4rem .2rem 2rem}
+#t-home:checked ~ main .p-home,
+#t-pages:checked ~ main .p-pages,
+#t-channels:checked ~ main .p-channels{display:block}
+.lead{font-size:1.2rem;margin-top:0}
+.list{list-style:none;margin:0;padding:0;display:grid;gap:.8rem}
+.list a{display:block;padding:1rem 1.1rem;border:1px solid var(--line);border-radius:14px;
+  background:rgba(20,26,69,.82);color:var(--ink);text-decoration:none;transition:border-color .2s,background .2s}
+.list a:hover{border-color:var(--glow)}
+.list a:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.name{font-weight:700;font-size:1.05rem}
+.desc{display:block;color:var(--dim);font-size:.9rem;margin-top:.15rem}
+.empty{color:var(--dim)}
+@media (prefers-reduced-motion:reduce){.gt{animation:none}.grid i::before{transition:none}
+  .gate,main{transition:none}}
+
+html,body{height:100%;overflow:hidden;touch-action:none}
+#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:100}
+main{height:100vh;height:100dvh;display:flex;flex-direction:column;
+  padding-bottom:max(1.2rem,env(safe-area-inset-bottom))}
+.panel{flex:1;min-height:0;overflow-y:auto;touch-action:pan-y;pointer-events:auto}
+
+.wall{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none}
+.wall-shade{position:fixed;inset:0;z-index:0;pointer-events:none;background:rgba(10,14,42,var(--shade,.35))}
+@media (prefers-reduced-motion:reduce){video.wall{display:none}}
+
+.hint{display:grid;justify-items:center;align-items:center}
+.load,.ready{grid-area:1/1;display:flex;flex-direction:column;align-items:center;gap:.5rem}
+.load{opacity:0;pointer-events:none;color:var(--dim);font-size:.95rem;letter-spacing:.12em;
+  transition:opacity .3s ease}
+.ready{transition:opacity .6s ease}
+.spin{width:2.6rem;height:2.6rem;border-radius:50%;border:3px solid rgba(125,243,255,.25);
+  border-top-color:var(--glow);animation:spin .9s linear infinite}
+.has-op .load{color:#6b7399}
+.has-op .spin{border-color:rgba(26,140,255,.18);border-top-color:#1a8cff}
+html.loading .load{opacity:1}
+html.loading .ready{opacity:0}
+html.loading .gate{pointer-events:none;cursor:progress}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin{animation:none}.load,.ready{transition:none}}
+.edge{position:fixed;inset:0;z-index:1;pointer-events:none;opacity:0;background:linear-gradient(to right,rgba(0,0,0,1.000) 0.0%,rgba(0,0,0,0.699) 10.5%,rgba(0,0,0,0.456) 21.0%,rgba(0,0,0,0.218) 35.0%,rgba(0,0,0,0.047) 52.5%,rgba(0,0,0,0.000) 70.0%);transition:opacity .9s ease .2s}#enter:checked ~ .edge{opacity:1}@media (prefers-reduced-motion:reduce){.edge{transition:none}}
+.back{display:block;margin-top:1.4rem;padding:1rem 1.1rem;border:1px solid var(--line);border-radius:14px;
+  background:rgba(20,26,69,.82);color:var(--ink);font-weight:700;cursor:pointer;
+  transition:border-color .2s,background .2s}
+.back::before{content:"\21A9";margin-right:.6rem;color:var(--glow)}
+.back:hover{border-color:var(--glow)}
+.back:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+
+.viewer{display:none}
+.p-pages.open .list{display:none}
+.p-pages.open{overflow:hidden;padding-bottom:.4rem}
+.p-pages.open .viewer{display:flex;flex-direction:column;gap:.6rem;height:100%;min-height:70vh}
+.vbar{display:flex;align-items:center;gap:.8rem}
+.vback{font:inherit;font-weight:700;padding:.5rem 1rem;border:1px solid var(--line);border-radius:999px;
+  background:rgba(20,26,69,.82);color:var(--ink);cursor:pointer;pointer-events:auto}
+.vback:hover{border-color:var(--glow)}
+.vback:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.vtitle{color:var(--dim);font-size:.9rem}
+.viewer iframe{flex:1;min-height:0;width:100%;border:1px solid var(--line);border-radius:14px;background:#0a0e2a;pointer-events:auto}
+
+.sub[hidden]{display:none!important}
+/* ---------- タブが4つになるので、はみ出したら横にスクロールできるようにする ---------- */
+.tabs{overflow-x:auto;touch-action:pan-x;pointer-events:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs label{white-space:nowrap;padding:.6rem .8rem}
+main button{pointer-events:auto}
+#t-sound:checked ~ main label[for=t-sound]{color:var(--ink);border-bottom-color:var(--glow)}
+#t-sound:checked ~ main .p-sound{display:block}
+#t-screen:checked ~ main label[for=t-screen]{color:var(--ink);border-bottom-color:var(--glow)}
+#t-screen:checked ~ main .p-screen{display:block}
+
+/* ---------- 最初の「音楽の再生を許可しますか？」画面 ---------- */
+.perm{display:none;position:fixed;inset:0;z-index:90;align-items:center;justify-content:center;
+  text-align:center;padding:1.5rem;opacity:1;transition:opacity .5s ease;
+  background:radial-gradient(90% 70% at 50% 38%,#0c1233 0%,#050711 58%,#020308 100%)}
+html.perm-on .perm{display:flex}
+.perm.gone{opacity:0;pointer-events:none}
+.perm::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,rgba(255,255,255,.03) 0 1px,transparent 1px 4px)}
+.perm::after{content:"";position:absolute;left:0;right:0;top:0;height:30%;pointer-events:none;
+  background:linear-gradient(180deg,transparent,rgba(125,243,255,.06),transparent);
+  animation:perm-scan 5s linear infinite}
+@keyframes perm-scan{from{transform:translateY(-100%)}to{transform:translateY(420%)}}
+.pc{position:absolute;width:30px;height:30px;border:2px solid rgba(125,243,255,.55)}
+.pc.tl{top:max(18px,env(safe-area-inset-top));left:18px;border-right:0;border-bottom:0}
+.pc.tr{top:max(18px,env(safe-area-inset-top));right:18px;border-left:0;border-bottom:0}
+.pc.bl{bottom:max(18px,env(safe-area-inset-bottom));left:18px;border-right:0;border-top:0}
+.pc.br{bottom:max(18px,env(safe-area-inset-bottom));right:18px;border-left:0;border-top:0}
+.perm-in{position:relative;z-index:1;max-width:34rem}
+.perm-in > *{opacity:0;transform:translateY(10px);animation:perm-rise .7s ease forwards}
+.perm-in > :nth-child(2){animation-delay:.12s}
+.perm-in > :nth-child(3){animation-delay:.24s}
+.perm-in > :nth-child(4){animation-delay:.36s}
+.perm-in > :nth-child(5){animation-delay:.5s}
+@keyframes perm-rise{to{opacity:1;transform:none}}
+.eq{display:flex;gap:5px;align-items:flex-end;justify-content:center;height:34px;margin-bottom:1.1rem}
+.eq i{display:block;width:4px;height:100%;background:var(--glow);box-shadow:0 0 10px var(--glow);
+  transform-origin:bottom;transform:scaleY(.2);animation:perm-eq 1.1s ease-in-out infinite}
+.eq i:nth-child(2){animation-duration:.8s;animation-delay:-.3s}
+.eq i:nth-child(3){animation-duration:1.3s;animation-delay:-.6s}
+.eq i:nth-child(4){animation-duration:.9s;animation-delay:-.15s}
+.eq i:nth-child(5){animation-duration:1.2s;animation-delay:-.45s}
+@keyframes perm-eq{0%,100%{transform:scaleY(.2)}50%{transform:scaleY(1)}}
+.perm-k{margin:0 0 .5rem;color:var(--glow);font-size:.8rem;font-weight:700;letter-spacing:.5em;padding-left:.5em}
+.perm-t{margin:0;font-size:clamp(1.1rem,5.3vw,2.3rem);font-weight:900;letter-spacing:.04em;line-height:1.4;text-wrap:balance;
+  text-shadow:0 0 22px rgba(125,243,255,.4)}
+.perm-s{margin:.7rem 0 0;color:var(--dim);font-size:1rem;letter-spacing:.08em}
+.perm-btns{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;margin-top:2.3rem}
+.pb{appearance:none;border:0;font:inherit;cursor:pointer;min-width:9.5rem;padding:.8rem 1.8rem;
+  display:flex;flex-direction:column;align-items:center;line-height:1.25;
+  clip-path:polygon(14px 0,100% 0,calc(100% - 14px) 100%,0 100%);
+  transition:filter .2s,transform .2s,background .2s,color .2s}
+.pb span{font-weight:900;font-size:1.15rem;letter-spacing:.25em;padding-left:.25em}
+.pb small{font-size:.62rem;letter-spacing:.35em;opacity:.75}
+.pb.yes{background:linear-gradient(135deg,#7df3ff,#1a8cff);color:#04101f}
+.pb.no{background:rgba(154,163,214,.16);color:var(--dim)}
+.pb:hover{filter:brightness(1.18);transform:translateY(-2px)}
+.pb:active{transform:translateY(0) scale(.97)}
+.pb:focus-visible{box-shadow:inset 0 0 0 2px #fff}
+@media (prefers-reduced-motion:reduce){
+  .perm::after,.eq i{animation:none}
+  .eq i{transform:scaleY(.6)}
+  .perm-in > *{animation:none;opacity:1;transform:none}
+  .perm{transition:none}
+}
+
+/* ---------- サウンド設定タブ ---------- */
+.sw{display:flex;align-items:center;justify-content:space-between;padding:.8rem 1.1rem;margin-bottom:1rem;
+  border:1px solid var(--line);border-radius:14px;background:rgba(20,26,69,.82)}
+.sw-t{font-weight:700}
+.tgl{font:inherit;cursor:pointer;border:1px solid var(--line);border-radius:999px;padding:.25rem 1.1rem;
+  background:transparent;color:var(--dim);font-weight:900;letter-spacing:.1em}
+.tgl[aria-pressed=true]{background:var(--glow);border-color:var(--glow);color:#0a0e2a}
+.subtabs{display:flex;gap:.4rem;flex-wrap:wrap;margin-bottom:1rem}
+.subtabs button{font:inherit;cursor:pointer;border:1px solid var(--line);border-radius:999px;
+  padding:.35rem .95rem;background:rgba(20,26,69,.6);color:var(--dim);font-weight:700}
+.subtabs button[aria-selected=true]{color:var(--ink);border-color:var(--glow)}
+.sub[hidden]{display:none}
+.sub h2{margin:.2rem 0 .3rem;font-size:1.05rem}
+.s-hint{margin:0 0 .9rem;color:#c3caf0;font-size:.85rem;text-shadow:0 1px 6px rgba(10,14,42,.95)}
+.songs{list-style:none;margin:0;padding:0;display:grid;gap:.6rem}
+.songs li{display:flex;gap:.5rem}
+.song{flex:1;min-width:0;display:flex;align-items:center;gap:.8rem;text-align:left;font:inherit;cursor:pointer;
+  padding:.8rem 1rem;border:1px solid var(--line);border-radius:14px;background:rgba(20,26,69,.82);
+  color:var(--ink);transition:border-color .2s,box-shadow .2s}
+.song:hover{border-color:var(--glow)}
+.song[aria-pressed=true]{border-color:var(--glow);box-shadow:0 0 16px rgba(125,243,255,.25)}
+.song[disabled],.pv[disabled]{opacity:.45;cursor:not-allowed}
+.song:focus-visible,.pv:focus-visible,.tgl:focus-visible,.subtabs button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.s-main{flex:1;min-width:0}
+.s-title{display:block;font-weight:700}
+.s-note{display:block;color:var(--dim);font-size:.85rem}
+.s-badge{display:none;flex:none;padding:.1rem .6rem;border-radius:999px;font-size:.75rem;font-weight:700;
+  background:var(--glow);color:#0a0e2a}
+.s-badge.off{display:inline-block;background:transparent;border:1px solid var(--line);color:var(--dim)}
+.song[aria-pressed=true] .s-badge:not(.off){display:inline-block}
+.pv{flex:none;width:3.2rem;font:inherit;cursor:pointer;border:1px solid var(--line);border-radius:14px;
+  background:rgba(20,26,69,.82);color:var(--ink)}
+.pv:hover{border-color:var(--glow)}
+.pv[aria-pressed=true]{background:var(--glow);border-color:var(--glow);color:#0a0e2a}
+.s-msg{min-height:1.5em;margin:.8rem 0 0;color:var(--glow);font-size:.9rem;text-shadow:0 1px 6px rgba(10,14,42,.95)}
+.vols{display:grid;gap:.5rem;margin-bottom:1rem;padding:.8rem 1.1rem;border:1px solid var(--line);border-radius:14px;background:rgba(20,26,69,.82)}
+.vol{display:grid;grid-template-columns:minmax(6.5rem,9.5rem) 1fr 3rem;align-items:center;gap:.8rem}
+.vol-t{font-weight:700;font-size:.9rem}
+.vol output{text-align:right;color:var(--dim);font-size:.85rem;font-variant-numeric:tabular-nums}
+.vol input[type=range]{width:100%;min-width:0;accent-color:var(--glow);cursor:pointer;pointer-events:auto;margin:0;height:1.6rem}
+.vol input[type=range]:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.s-tag{display:inline-block;margin-top:.3rem;padding:.05rem .55rem;border:1px solid var(--glow);border-radius:999px;
+  color:var(--glow);font-size:.7rem;font-weight:700;letter-spacing:.05em}
+
+.gate{overflow:hidden}
+.gate > .op,.gate > .hint{position:relative;z-index:1}
+.op-motion{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;z-index:0;
+  pointer-events:none;opacity:0;transition:opacity .8s ease;
+  transform:scale(1.1);filter:blur(6px)}
+.op-veil{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;
+  background:rgba(255,255,255,0.25);transition:opacity .8s ease}
+.gate.has-motion .op-motion,.gate.has-motion .op-veil{opacity:1}
+.gate.has-motion .op{mix-blend-mode:multiply}
+@media (prefers-reduced-motion:reduce){.op-motion,.op-veil{display:none}.gate.has-motion .op{mix-blend-mode:normal}}
+
+.upd{position:fixed;left:50%;bottom:max(1.2rem,env(safe-area-inset-bottom));transform:translateX(-50%);
+  z-index:200;display:flex;align-items:center;gap:.8rem;max-width:92vw;
+  padding:.7rem .9rem .7rem 1.2rem;background:rgba(10,14,42,.94);color:var(--ink);
+  border:1px solid var(--glow);border-radius:999px;box-shadow:0 0 24px rgba(125,243,255,.35);
+  font-weight:700;pointer-events:auto;animation:upd-in .5s ease both}
+.upd button{font:inherit;cursor:pointer;border:0;border-radius:999px;padding:.35rem .9rem;
+  background:var(--glow);color:#0a0e2a;font-weight:900}
+.upd .x{background:none;color:var(--dim);padding:.2rem .5rem;font-size:1.1rem}
+.upd button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+@keyframes upd-in{from{opacity:0;transform:translate(-50%,12px)}}
+@media (prefers-reduced-motion:reduce){.upd{animation:none}}
+
+.gate.has-op{background:#fff;gap:1.6rem}
+.op{display:block;width:min(92vw,1100px)}
+.op-video,.op-still{display:block;width:100%;height:auto}
+.op-still{display:none}
+.has-op .gt{font-size:clamp(1.1rem,3.4vw,1.6rem);letter-spacing:.18em;color:#2a2a2e;
+  text-shadow:0 0 18px rgba(26,140,255,.35)}
+.has-op .gs{color:#6b7399}
+#enter:focus-visible ~ .gate.has-op{outline-color:#1a8cff}
+.op-fallback .op-video{display:none}
+.op-fallback .op-still{display:block}
+@media (prefers-reduced-motion:reduce){.op-video{display:none}.op-still{display:block}}
+
+h1{overflow-wrap:anywhere}
+main{padding-left:max(clamp(1.2rem,5vw,4rem),env(safe-area-inset-left))}
+.op-video,.op-still{max-height:calc(100vh - 8rem);max-height:calc(100dvh - 8rem);object-fit:contain}
+@media (max-width:820px){
+  main{padding-right:max(.9rem,env(safe-area-inset-right))}
+  h1{font-size:clamp(1.15rem,5.4vw,1.7rem)}
+  .tabs label{font-size:.92rem}
+  .panel{padding-top:1rem}
+}
+@media (hover:none) and (pointer:coarse){
+  /* スマホで長押ししたとき、リンクのメニューや文字選択が出ないようにする (操作する部品だけ) */
+  .list a,.tabs label,.back,.vback,.subtabs button,.song,.pv,.sw,.tgl,.wall,a[href="#"],main button{
+    -webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+  .wall,.op-video,.op-still{pointer-events:none}
+}
+@media (max-width:480px){
+  .lead{font-size:1.05rem}
+  .list a{padding:.8rem .9rem}
+  .vol{grid-template-columns:1fr 3rem}
+  .vol-t{grid-column:1/-1}
+}
+@media (orientation:portrait){.wall{object-position:72% 50%}}
+@media (max-height:520px){
+  main{padding-top:max(.5rem,env(safe-area-inset-top));padding-bottom:.4rem}
+  h1{font-size:1.1rem;margin-bottom:.3rem}
+  .tabs label{padding:.35rem .7rem}
+  .panel{padding:.7rem .2rem 1rem}
+  .lead{font-size:1rem}
+  .gt{font-size:clamp(1.6rem,8vh,2.4rem)}
+}
+.rot{display:none;margin-top:.5rem;color:var(--dim);font-size:.8rem;letter-spacing:.05em}
+.has-op .rot{color:#6b7399}
+@media (orientation:portrait) and (max-width:820px){.rot{display:block}}
+html:not(.loading) .rot{animation:rotfade 9s ease forwards}
+@keyframes rotfade{0%,75%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){html:not(.loading) .rot{animation:none}}
+:root{--btn-a:0.25}.list a,.song,.pv,.back,.vback,.subtabs button,.tabs label{background-color:rgba(20,26,69,var(--btn-a))}.list a,.song,.pv,.back,.vback{background-image:linear-gradient(to left,rgba(0,0,0,.8),rgba(0,0,0,.4) 55%,rgba(0,0,0,0));background-repeat:no-repeat;background-position:right center;background-size:0% 100%;transition:background-size .45s ease,transform .25s ease,border-color .2s,box-shadow .2s}.sw,.vols{background-color:rgba(20,26,69,var(--btn-a))}.list a,.song,.pv,.back,.vback,.subtabs button,.tabs label,.sw,.vols{text-shadow:0 1px 6px rgba(10,14,42,.9)}.tabs label{border-radius:10px 10px 0 0}@media (hover:hover){.list a:hover,.song:not(:disabled):hover,.pv:not(:disabled):hover,.back:hover,.vback:hover{background-size:100% 100%;transform:scale(1.03);border-color:var(--glow);position:relative;z-index:2}.tgl:not(:disabled):hover{transform:scale(1.06)}.tabs label:hover{color:var(--ink)}.subtabs button:hover{color:var(--ink);border-color:var(--glow)}}.list a:focus-visible,.song:focus-visible,.pv:focus-visible,.back:focus-visible,.vback:focus-visible{background-size:100% 100%}.tgl{transition:transform .25s ease,background .2s,border-color .2s}.panel{padding-left:.7rem;padding-right:.7rem}@media (prefers-reduced-motion:reduce){.list a,.song,.pv,.back,.vback,.tgl{transition:none}.list a:hover,.song:hover,.pv:hover,.back:hover,.vback:hover,.tgl:hover{transform:none}}
+.visits{margin:1.1rem 0 0;color:var(--dim);font-size:.95rem;text-shadow:0 1px 6px rgba(10,14,42,.95)}
+.visits[hidden]{display:none}
+.visits b{color:var(--ink);font-size:1.15rem;font-variant-numeric:tabular-nums;margin:0 .15rem}
+
+.dm{overflow-wrap:anywhere}
+.dm p,.dm-t{margin:0}
+.dm-gap{height:1em}
+.dm-h1,.dm-h2,.dm-h3{font-weight:800;line-height:1.3;margin:.5em 0 .15em}
+.dm-h1{font-size:1.75em}.dm-h2{font-size:1.4em}.dm-h3{font-size:1.15em}
+.dm-sub{font-size:.8em;color:var(--dim);margin:.1em 0}
+.dm-q{margin:.25em 0;padding:.05em 0 .05em .9em;border-left:4px solid rgba(154,163,214,.55)}
+.dm-l{margin:.2em 0;padding-left:1.6em}
+.dm-l .dm-l{margin:0}
+.dm-l li{margin:.05em 0}
+.dm-cb{margin:.35em 0;padding:.7em .9em;background:rgba(0,0,0,.5);border:1px solid var(--line);border-radius:8px;
+  overflow-x:auto;white-space:pre;font:.9em/1.5 ui-monospace,Consolas,'Courier New',monospace;
+  -webkit-user-select:text;user-select:text;pointer-events:auto}
+.dm-cb code{font:inherit}
+.dm-ic{padding:.1em .35em;background:rgba(0,0,0,.5);border:1px solid var(--line);border-radius:5px;
+  font:.9em ui-monospace,Consolas,'Courier New',monospace;-webkit-user-select:text;user-select:text}
+.dm a{color:var(--glow);text-decoration:none;pointer-events:auto}
+.dm a:hover{text-decoration:underline}
+.dm-sp{background:#1b2150;border-radius:4px;cursor:pointer;pointer-events:auto}
+.dm-sp:not(.on),.dm-sp:not(.on) *{color:transparent!important;text-shadow:none!important;text-decoration-color:transparent!important}
+.dm-sp:not(.on) img{opacity:0}
+.dm-sp:not(.on) a{pointer-events:none}
+.dm-sp.on{background:rgba(255,255,255,.12)}
+.dm-ts{padding:0 .3em;background:rgba(255,255,255,.1);border-radius:4px}
+.dm-emoji{width:1.4em;height:1.4em;vertical-align:-.3em;object-fit:contain}
+
+#t-fukyou:checked ~ main label[for=t-fukyou]{color:var(--ink);border-bottom-color:var(--glow)}
+#t-fukyou:checked ~ main .p-fukyou{display:block}
+.fk-view[hidden]{display:none!important}
+.fk-view:not([hidden]){animation:fk-in .35s ease}
+@keyframes fk-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.fk-view .vbar{margin-bottom:1rem}
+.fk-intro{margin:0 0 1rem;color:var(--dim)}
+.fk-card{position:relative;overflow:hidden;isolation:isolate}
+.fk-card .name,.fk-card .desc{position:relative;z-index:1}
+.fk-card.has-img::before{content:'';position:absolute;inset:0;z-index:0;opacity:0;transition:opacity 1.1s ease;
+  background:linear-gradient(to right,rgba(10,14,42,.9) 0%,rgba(10,14,42,.4) 55%,rgba(10,14,42,.05) 100%),
+    var(--img) var(--pos,center)/cover no-repeat}
+.fk-card.has-img:focus-visible::before,.fk-card.has-img:active::before{opacity:1}
+@media (hover:hover){.fk-card.has-img:hover::before{opacity:1}}
+.fk-detail{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1.1rem;
+  min-height:calc(100vh - 14rem);min-height:calc(100dvh - 14rem)}
+.fk-img{display:block;width:auto;height:auto;max-width:min(100%,420px);max-height:50vh;border-radius:14px;
+  border:1px solid var(--line);box-shadow:0 8px 28px rgba(0,0,0,.45)}
+.fk-body{width:100%;max-width:100%}
+@media (prefers-reduced-motion:reduce){.fk-view:not([hidden]){animation:none}.fk-card.has-img::before{transition:none}}
+
+.tabs{overflow-x:auto;overflow-y:hidden;pointer-events:auto;touch-action:pan-x;-webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;scrollbar-color:rgba(125,243,255,.45) transparent}
+.tabs::-webkit-scrollbar{display:block;height:6px}
+.tabs::-webkit-scrollbar-track{background:transparent}
+.tabs::-webkit-scrollbar-thumb{background:rgba(125,243,255,.4);border-radius:3px}
+.tabs label{flex:none;white-space:nowrap}
+.tabs.dragging{cursor:grabbing;-webkit-user-select:none;user-select:none}
+.tabs.dragging label{cursor:grabbing}
+
+input{-webkit-user-select:text;user-select:text}
+main input[type=password]{pointer-events:auto}
+#t-dev:checked ~ main label[for=t-dev]{color:var(--ink);border-bottom-color:var(--glow)}
+#t-dev:checked ~ main .p-dev{display:block}
+.tabs .t-dev{margin-left:auto;flex:none}
+.dev-lock[hidden],.dev-body[hidden]{display:none!important}
+.dev-row{display:flex;gap:.6rem;align-items:center;max-width:28rem;margin:.4rem 0}
+.dev-pw{flex:1;min-width:0;font:inherit;font-size:1rem;padding:.6rem .9rem;color:var(--ink);
+  border:1px solid var(--line);border-radius:12px;background:rgba(10,14,42,.85)}
+.dev-pw:focus{outline:2px solid var(--gold);outline-offset:2px}
+.dev-code{font-family:ui-monospace,Consolas,monospace;color:var(--glow);font-size:.9rem}
+.dev-body h2{margin:.2rem 0 .8rem;font-size:1.05rem}
+
+.env-box{margin-top:1.2rem;max-width:44rem}
+.env-box h3{margin:0 0 .5rem;font-size:1rem}
+.env-box input,.env-box button{pointer-events:auto}
+.env-bar{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:.4rem 0 .6rem}
+.env-bar input{font:inherit;font-size:.9rem;padding:.4rem .7rem;color:var(--ink);border:1px solid var(--line);
+  border-radius:10px;background:rgba(10,14,42,.85);min-width:0;flex:1 1 9rem}
+.env-bar button,.env-f button{font:inherit;font-size:.8rem;font-weight:700;padding:.25rem .7rem;border-radius:999px;
+  border:1px solid var(--line);background:rgba(20,26,69,.9);color:var(--ink);cursor:pointer}
+.env-card{border:1px solid var(--line);border-radius:12px;padding:.6rem .85rem;margin:.5rem 0;background:rgba(10,14,42,.62)}
+.env-name{font-weight:800;font-size:1rem;margin-bottom:.2rem}
+.env-tag{display:inline-block;font-size:.7rem;font-weight:700;color:var(--glow);border:1px solid var(--line);
+  border-radius:999px;padding:0 .5rem;margin-left:.35rem;vertical-align:.1rem}
+.env-f{display:grid;grid-template-columns:6.5rem 1fr auto;gap:.1rem .6rem;align-items:baseline;font-size:.88rem;padding:.12rem 0}
+.env-l{color:var(--dim);font-size:.8rem}
+.env-v{overflow-wrap:anywhere;white-space:pre-wrap;min-width:0;font-family:ui-monospace,Consolas,monospace;
+  -webkit-user-select:text;user-select:text}
+.env-v.plain{font-family:inherit}
+.env-v.mask{color:var(--dim)}
+.env-b{display:flex;gap:.3rem}
+.env-note{color:var(--dim);font-size:.8rem;margin:.3rem 0}
+.env-err{color:#ffb3bd}
+@media (max-width:480px){.env-f{grid-template-columns:5rem 1fr}.env-b{grid-column:2}}
+</style>
+<script>document.documentElement.classList.add('perm-on');window.__perm=new Promise(function(r){window.__permResolve=r})</script>
+<script>document.documentElement.classList.add('loading');(window.__perm||Promise.resolve()).then(function(){setTimeout(function(){document.documentElement.classList.remove('loading')},120000)})</script>
+</head>
+<body style="--cols:22;--rows:40">
+<input type="checkbox" id="enter" class="sr" aria-label="サイトに入る">
+<input type="radio" name="tab" id="t-home" class="sr" checked>
+<input type="radio" name="tab" id="t-pages" class="sr">
+<input type="radio" name="tab" id="t-channels" class="sr">
+<input type="radio" name="tab" id="t-fukyou" class="sr">
+<input type="radio" name="tab" id="t-screen" class="sr"><input type="radio" name="tab" id="t-sound" class="sr">
+<input type="radio" name="tab" id="t-dev" class="sr">
+
+<label class="gate has-op" for="enter">
+  <video class="op-motion" muted loop playsinline disablepictureinpicture aria-hidden="true"></video><span class="op-veil" aria-hidden="true"></span>
+  <span class="op"><video class="op-video" src="siryou/op.mp4" muted playsinline preload="none" disablepictureinpicture aria-hidden="true"></video><img class="op-still" src="siryou/logo.png" alt="" aria-hidden="true" loading="lazy"></span>
+  <span class="hint"><span class="load" role="status"><span class="spin" aria-hidden="true"></span><span class="pct">読み込み中…</span></span><span class="ready"><span class="gt"><span class="click">Click to enter</span><span class="tap">Tap to enter</span></span><span class="gs">画面をクリック / タップ</span><span class="rot">横画面にすることをお勧めします</span></span></span>
+</label>
+
+<div class="perm" role="dialog" aria-modal="true" aria-labelledby="perm-t">
+  <span class="pc tl"></span><span class="pc tr"></span><span class="pc bl"></span><span class="pc br"></span>
+  <div class="perm-in">
+    <div class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    <p class="perm-k">SOUND</p>
+    <h2 class="perm-t" id="perm-t">このサイトでは音楽が流れます</h2>
+    <p class="perm-s">音楽の再生を許可しますか？</p>
+    <div class="perm-btns">
+      <button type="button" class="pb yes" data-perm="yes"><span>はい</span><small>YES</small></button>
+      <button type="button" class="pb no" data-perm="no"><span>いいえ</span><small>NO</small></button>
+    </div>
+  </div>
+</div>
+
+<video class="wall" data-src="siryou/wallpaper.mp4" muted loop playsinline preload="none" disablepictureinpicture aria-hidden="true"></video><noscript><video class="wall" src="siryou/wallpaper.mp4" autoplay muted loop playsinline preload="auto" disablepictureinpicture aria-hidden="true"></video></noscript><div class="wall-shade" style="--shade:0.35"></div>
+<div class="edge" aria-hidden="true"></div>
+<canvas id="fx" aria-hidden="true"></canvas>
+<script>
+(() => {
+  const cv = document.getElementById('fx');
+  const ctx = cv.getContext('2d');
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+  const TAU = Math.PI * 2;
+  const TAP_MS = 900;     // タップ演出の長さ
+  const TRAIL_MS = 380;   // 尾が消えるまでの時間
+  let W = 0, H = 0;
+
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = W * dpr; cv.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const lerp = (a, b, t) => a + (b - a) * Math.min(1, Math.max(0, t));
+  const taps = [], pts = [], tris = [];
+  const held = new Set();
+  let last = null, acc = 0, newStroke = true;
+
+  function tri(x, y, s, rot) {
+    ctx.beginPath();
+    for (let i = 0; i < 3; i++) {
+      const a = rot + (i * TAU) / 3;
+      ctx.lineTo(x + Math.cos(a) * s, y + Math.sin(a) * s);
+    }
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function spawnTri(x, y, now) {
+    tris.push({
+      x: x + (Math.random() - 0.5) * 22, y: y + (Math.random() - 0.5) * 22,
+      vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4 - 0.1,
+      t: now, life: 500 + Math.random() * 300,
+      rot: Math.random() * TAU, s: 3 + Math.random() * 3,
+      white: Math.random() < 0.5,
+    });
+  }
+
+  window.addEventListener('pointerdown', (e) => {
+    held.add(e.pointerId);
+    last = { x: e.clientX, y: e.clientY };
+    newStroke = true;
+    taps.push({ x: e.clientX, y: e.clientY, t: performance.now(), rot: Math.random() * TAU });
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    // マウスは動かすだけで尾が出る。タッチ/ペンは触れている間だけ
+    if (e.pointerType !== 'mouse' && !held.has(e.pointerId)) return;
+    const now = performance.now();
+    const x = e.clientX, y = e.clientY;
+    if (last) {
+      acc += Math.hypot(x - last.x, y - last.y);
+      if (acc > 34) { acc = 0; spawnTri(x, y, now); }
+    }
+    pts.push({ x, y, t: now, b: newStroke });
+    newStroke = false;
+    last = { x, y };
+  });
+
+  const release = (e) => { held.delete(e.pointerId); last = null; newStroke = true; };
+  window.addEventListener('pointerup', release);
+  window.addEventListener('pointercancel', release);
+
+  function drawTap(tp, now) {
+    const p = (now - tp.t) / TAP_MS;
+    if (p >= 1) return false;
+    const { x, y } = tp;
+
+    let r;
+    if (p < 0.12) r = lerp(3, 9, p / 0.12);
+    else if (p < 0.35) r = lerp(9, 22, (p - 0.12) / 0.23);
+    else r = lerp(22, 31, (p - 0.35) / 0.65);
+
+    const fillA = p < 0.35 ? 1 : 1 - Math.min(1, (p - 0.35) / 0.2);
+    const fade = p < 0.55 ? 1 : 1 - (p - 0.55) / 0.45;
+
+    ctx.shadowColor = 'rgba(70,140,255,.95)';
+    ctx.shadowBlur = 18;
+
+    if (fillA > 0) {
+      ctx.globalAlpha = fillA;
+      ctx.fillStyle = p < 0.12 ? '#cfe0ff' : '#5b9bff';
+      ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+    }
+
+    if (p >= 0.08) {
+      ctx.globalAlpha = Math.max(0, fade);
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = p < 0.5 ? '#ffffff' : '#8fdcff';
+      if (p < 0.35) {
+        ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
+      } else {
+        // 輪が3つの弧に割れて、すきまが広がりながら回る
+        const gap = lerp(0, 1.0, (p - 0.35) / 0.3);
+        const seg = TAU / 3;
+        for (let i = 0; i < 3; i++) {
+          const a0 = tp.rot + p * 3 + i * seg + gap / 2;
+          ctx.beginPath(); ctx.arc(x, y, r, a0, a0 + seg - gap); ctx.stroke();
+        }
+      }
+    }
+
+    if (p > 0.1) {
+      ctx.globalAlpha = Math.max(0, 1 - (p - 0.15) / 0.75);
+      ctx.fillStyle = '#ffffff';
+      const d = r + 9 + p * 16, sz = lerp(4.5, 2.5, p);
+      for (let k = 0; k < 4; k++) {
+        const ang = tp.rot - p * 2.5 + (k * TAU) / 4;
+        tri(x + Math.cos(ang) * d, y + Math.sin(ang) * d, sz, ang);
+      }
+    }
+
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+    return true;
+  }
+
+  function drawTrail(now) {
+    while (pts.length && now - pts[0].t > TRAIL_MS) pts.shift();
+    ctx.lineCap = 'round';
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i], b = pts[i - 1];
+      if (a.b) continue;                       // 別のなぞりとはつなげない
+      const k = 1 - (now - a.t) / TRAIL_MS;    // 新しいほど1、古いほど0
+      if (k <= 0) continue;
+      const w = 1 + k * 4.5;
+      ctx.shadowColor = 'rgba(0,150,255,.9)';
+      ctx.shadowBlur = 14;
+      ctx.strokeStyle = 'rgba(20,170,255,' + k + ')';
+      ctx.lineWidth = w;
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(a.x, a.y); ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'rgba(210,242,255,' + k * 0.85 + ')';  // 中心の白っぽい芯
+      ctx.lineWidth = w * 0.35;
+      ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(a.x, a.y); ctx.stroke();
+    }
+  }
+
+  function drawTris(now) {
+    for (let i = tris.length - 1; i >= 0; i--) {
+      const t = tris[i];
+      const k = 1 - (now - t.t) / t.life;
+      if (k <= 0) { tris.splice(i, 1); continue; }
+      t.x += t.vx; t.y += t.vy; t.rot += 0.04;
+      ctx.globalAlpha = k;
+      ctx.fillStyle = t.white ? '#ffffff' : '#7fd0ff';
+      tri(t.x, t.y, t.s * (0.5 + k * 0.5), t.rot);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function frame(now) {
+    ctx.clearRect(0, 0, W, H);
+    drawTrail(now);
+    drawTris(now);
+    for (let i = taps.length - 1; i >= 0; i--) {
+      if (!drawTap(taps[i], now)) taps.splice(i, 1);
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+<script>
+(() => {
+  const v = document.querySelector('.op-video');
+  if (!v) return;
+  const fb = () => document.body.classList.add('op-fallback');
+  v.addEventListener('error', fb);
+  const start = () => { const p = v.play(); if (p && p.catch) p.catch(fb); };
+  if (window.__perm) window.__perm.then(start); else start();
+
+  // 「オープニング画面に戻る」で入場がやり直しになったら、OPアニメをもう一度流す
+  const enter = document.getElementById('enter');
+  if (enter) enter.addEventListener('change', () => {
+    if (enter.checked) return;
+    try { v.currentTime = 0; } catch (e) { /* まだ読み込み中 */ }
+    start();
+  });
+})();
+</script>
+<script>
+(() => {
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const b = e.target.closest && e.target.closest('.back');
+    if (!b) return;
+    e.preventDefault();
+    b.click();
+  });
+})();
+</script>
+<script>
+(() => {
+  const sec = () => document.querySelector('.p-pages');
+  function openPage(a) {
+    const s = sec(); if (!s) return;
+    const n = a.querySelector('.name');
+    s.querySelector('.vtitle').textContent = n ? n.textContent : '';
+    s.querySelector('.viewer iframe').src = a.getAttribute('href');
+    s.classList.add('open');
+    s.scrollTop = 0;
+  }
+  function closePage() {
+    const s = sec(); if (!s) return;
+    s.classList.remove('open');
+    s.querySelector('.viewer iframe').src = 'about:blank';   // 閉じたら通信も止める
+  }
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest ? e.target : e.target.parentElement;
+    if (!t) return;
+    const a = t.closest('.p-pages .list a');
+    if (a) { e.preventDefault(); openPage(a); return; }
+    if (t.closest('.vback')) closePage();
+  });
+  // 別のタブに移ったら閉じる
+  document.addEventListener('change', (e) => {
+    if (e.target && e.target.name === 'tab' && e.target.id !== 't-pages') closePage();
+  });
+})();
+</script>
+<script>
+(() => {
+  const KEY = 'osaito-btn-alpha', DEF = 25;
+  const root = document.documentElement;
+  const clamp = (n) => Math.min(100, Math.max(0, Math.round(n)));
+  let v = DEF;
+  try {
+    const s = localStorage.getItem(KEY);
+    if (s !== null) { const n = parseFloat(s); if (isFinite(n)) v = clamp(n); }
+  } catch (e) { /* 保存できない環境 */ }
+  const apply = (n) => root.style.setProperty('--btn-a', String(n / 100));
+  apply(v);
+  function ui() {
+    const r = document.getElementById('btn-alpha');
+    if (!r) return;
+    const out = document.querySelector('output[for="btn-alpha"]');
+    const rst = document.getElementById('btn-alpha-reset');
+    const show = () => { r.value = String(v); if (out) out.textContent = v + '%'; };
+    show();
+    r.addEventListener('input', () => {
+      v = clamp(parseFloat(r.value));
+      apply(v);
+      if (out) out.textContent = v + '%';
+      try { localStorage.setItem(KEY, String(v)); } catch (e) { /* 保存できない環境 */ }
+    });
+    if (rst) rst.addEventListener('click', () => {
+      v = DEF; apply(v); show();
+      try { localStorage.removeItem(KEY); } catch (e) { /* 保存できない環境 */ }
+    });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ui); else ui();
+})();
+</script>
+<script type="application/json" id="wall-cfg">{"def": "wallpaper.mp4", "gate": true, "list": [{"id": "wallpaper.mp4", "src": "siryou/wallpaper.mp4", "kind": "video"}, {"id": "wallpaper2.mp4", "src": "siryou/wallpaper2.mp4", "kind": "video"}, {"id": "wallpaper3.mp4", "src": "siryou/wallpaper3.mp4", "kind": "video"}, {"id": "wallpaper4.mp4", "src": "siryou/wallpaper4.mp4", "kind": "video"}, {"id": "wallpaper5.mp4", "src": "siryou/wallpaper5.mp4", "kind": "video"}, {"id": "wallpaper6.mp4", "src": "siryou/wallpaper6.mp4", "kind": "video"}, {"id": "wallpaper7.mp4", "src": "siryou/wallpaper7.mp4", "kind": "video"}, {"id": "wallpaper8.mp4", "src": "siryou/wallpaper8.mp4", "kind": "video"}, {"id": "wallpaper9.mp4", "src": "siryou/wallpaper9.mp4", "kind": "video"}, {"id": "wallpaper10.mp4", "src": "siryou/wallpaper10.mp4", "kind": "video"}]}</script>
+<script>
+(() => {
+  let cfg = null;
+  try { cfg = JSON.parse(document.getElementById('wall-cfg').textContent); } catch (e) { return; }
+  const list = cfg.list || [];
+  if (!list.length) return;
+  const KEY = 'osaito-wall';
+  const find = (id) => list.find((w) => w.id === id) || null;
+  let saved = null;
+  try { saved = localStorage.getItem(KEY); } catch (e) { /* 保存できない環境 */ }
+  let cur = find(saved) || find(cfg.def) || list[0];
+  const el = () => document.querySelector('.wall');
+
+  function make(w, lazy) {
+    if (w.kind === 'video') {
+      const v = document.createElement('video');
+      v.className = 'wall';
+      v.muted = true; v.loop = true;
+      v.setAttribute('playsinline', ''); v.setAttribute('disablepictureinpicture', ''); v.setAttribute('aria-hidden', 'true');
+      if (lazy) { v.dataset.src = w.src; v.preload = 'none'; }   // 読み込み待ち画面が、全部ダウンロードしてから再生する
+      else { v.preload = 'auto'; v.src = w.src; v.autoplay = true; }
+      return v;
+    }
+    const i = document.createElement('img');
+    i.className = 'wall'; i.alt = ''; i.setAttribute('aria-hidden', 'true'); i.src = w.src;
+    return i;
+  }
+  function drop(old) {
+    if (old && old.tagName === 'VIDEO') { old.removeAttribute('src'); old.load(); }   // 古い動画の再生と通信を止める
+    if (old) old.remove();
+  }
+
+  // 起動時: 最初の壁紙と違う壁紙が選ばれていたら、読み込みが始まる前に差し替える
+  if (cur.id !== cfg.def) {
+    const old = el();
+    if (old) { old.replaceWith(make(cur, !!cfg.gate)); }
+  }
+
+  // 切り替え (新しい壁紙が表示できるようになってから、ふわっと入れ替える)
+  function apply(w, done) {
+    const old = el();
+    const n = make(w, false);
+    n.style.opacity = '0';
+    n.style.transition = 'opacity .6s ease';
+    let fin = false;
+    const show = (ok) => {
+      if (fin) return; fin = true;
+      if (!ok) { drop(n.tagName === 'VIDEO' ? n : null); done(false); return; }
+      if (old) old.after(n); else document.body.prepend(n);
+      requestAnimationFrame(() => requestAnimationFrame(() => { n.style.opacity = '1'; }));
+      if (n.tagName === 'VIDEO') { const p = n.play(); if (p && p.catch) p.catch(() => {}); }
+      setTimeout(() => drop(old), 700);
+      done(true);
+    };
+    n.addEventListener(n.tagName === 'VIDEO' ? 'canplay' : 'load', () => show(true), { once: true });
+    n.addEventListener('error', () => show(false), { once: true });
+    setTimeout(() => show(true), 20000);   // 遅いときは、待たずに出す
+  }
+
+  // 止まった動画を再生し直す (タブの切り替え・省電力モード対策)
+  const resume = () => {
+    const v = el();
+    if (v && v.tagName === 'VIDEO' && v.src && v.paused && !document.hidden) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
+  };
+  document.addEventListener('visibilitychange', resume);
+  window.addEventListener('pageshow', resume);
+  window.addEventListener('pointerdown', resume, { passive: true });
+
+  function ui() {
+    const btns = [...document.querySelectorAll('.song[data-kind="wall"]')];
+    const msg = document.querySelector('.w-msg');
+    const mark = () => btns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === cur.id)));
+    mark();
+    btns.forEach((b) => b.addEventListener('click', () => {
+      if (b.disabled) return;
+      const w = find(b.dataset.id);
+      if (!w) return;
+      const title = b.querySelector('.s-title').textContent;
+      if (w.id === cur.id) { if (msg) msg.textContent = '「' + title + '」はいま使っている壁紙です。'; return; }
+      if (msg) msg.textContent = '「' + title + '」を読み込んでいます…';
+      apply(w, (ok) => {
+        if (!msg) return;
+        if (!ok) { msg.textContent = '「' + title + '」を読み込めませんでした。元の壁紙のままです。'; return; }
+        cur = w;
+        let kept = true;
+        try { localStorage.setItem(KEY, w.id); } catch (e) { kept = false; }
+        mark();
+        msg.textContent = '「' + title + '」に切り替えました。' + (kept ? '次にサイトを開いたときも、この壁紙になります。' : '(この端末では保存できないため、ページを閉じると元に戻ります)');
+      });
+    }));
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ui); else ui();
+})();
+</script>
+<script>
+(() => {
+  const root = document.documentElement;
+  const enter = document.getElementById('enter');
+  const pct = document.querySelector('.pct');
+  const wall = document.querySelector('video.wall[data-src]');
+  const MIN_MS = 1700;     // OPアニメが終わるまでは、最低でもこの時間は待つ
+  const STALL_MS = 15000;  // この間まったくデータが届かなければ、あきらめて普通の読み込みに切り替える
+  const MAX_MS = 120000;   // 何があってもこれ以上は待たせない
+  let finished = false;
+  const permP = window.__perm || Promise.resolve();  // 音楽の許可画面が終わるまで待つ
+  if (enter) enter.disabled = true;  // キーボード(Tab+Space)でも入れないようにする
+
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const once = (el, ev) => new Promise((r) => el.addEventListener(ev, r, { once: true }));
+  const play = () => {
+    if (wall && wall.src) { const p = wall.play(); if (p && p.catch) p.catch(() => {}); }
+  };
+
+  // 壁紙は全部ダウンロードしてから再生する (再生中に通信待ちで止まらない)
+  async function loadWall() {
+    if (!wall || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const src = wall.dataset.src;
+    try {
+      const ctl = new AbortController();
+      let timer = setTimeout(() => ctl.abort(), STALL_MS);
+      const res = await fetch(src, { signal: ctl.signal });
+      if (!res.ok || !res.body) throw new Error('bad response');
+      const total = Number(res.headers.get('content-length')) || 0;
+      const reader = res.body.getReader();
+      const parts = [];
+      let got = 0;
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        parts.push(value);
+        got += value.length;
+        clearTimeout(timer);
+        timer = setTimeout(() => ctl.abort(), STALL_MS);
+        if (pct && total) pct.textContent = '読み込み中 ' + Math.min(99, Math.floor((got / total) * 100)) + '%';
+      }
+      clearTimeout(timer);
+      const ready = Promise.race([once(wall, 'canplay'), once(wall, 'error'), sleep(8000)]);
+      wall.src = URL.createObjectURL(new Blob(parts, { type: res.headers.get('content-type') || 'video/mp4' }));
+      await ready;
+      play();
+    } catch (e) {
+      wall.src = src;  // うまくいかなければ普通に読み込ませて、先へ進む
+      play();
+    }
+  }
+
+  function finish() {
+    if (finished) return;
+    finished = true;
+    root.classList.remove('loading');
+    if (enter) enter.disabled = false;
+    play();
+  }
+
+  const pageLoaded = document.readyState === 'complete' ? Promise.resolve() : once(window, 'load');
+  // 音楽の許可画面のあいだは、何も読み込まない (壁紙のダウンロードも、選んだあとに始める)
+  // 特殊モーションの背景動画 (window.__motionReady) の準備も待つ。無ければ待たない
+  const motionP = permP.then(() => window.__motionReady || null).catch(() => {});
+  Promise.all([pageLoaded, permP.then(() => sleep(MIN_MS)), permP.then(loadWall), motionP]).then(finish, finish);
+  permP.then(() => setTimeout(finish, MAX_MS));
+
+  // 壁紙が止まってしまったとき(タブを切り替えた/省電力モード等)に再生し直す
+  const resume = () => { if (wall && wall.src && wall.paused && !document.hidden) play(); };
+  document.addEventListener('visibilitychange', resume);
+  window.addEventListener('pageshow', resume);
+  window.addEventListener('pointerdown', resume, { passive: true });
+  if (wall) wall.addEventListener('pause', () => setTimeout(resume, 300));
+})();
+</script>
+<script>
+(() => {
+  const m = document.querySelector('meta[name="build-id"]');
+  if (!m) return;
+  const mine = m.content;
+  let timer = null, shown = false;
+
+  async function check() {
+    if (shown) return;
+    try {
+      const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+      if (!r.ok) return;
+      const j = await r.json();
+      if (j.build && j.build !== mine) show(j.build);
+    } catch (e) { /* ネットワークが無いときなどは何もしない */ }
+  }
+
+  function show(next) {
+    shown = true;
+    clearInterval(timer);
+    const box = document.createElement('div');
+    box.className = 'upd';
+    box.setAttribute('role', 'status');
+    const msg = document.createElement('span');
+    msg.textContent = 'サイトが更新されました';
+    const go = document.createElement('button');
+    go.type = 'button';
+    go.textContent = '再読み込み';
+    // ?u= を付けるのは、古いキャッシュを読み直してしまわないようにするため
+    go.onclick = () => location.replace(location.pathname + '?u=' + next);
+    const x = document.createElement('button');
+    x.type = 'button';
+    x.className = 'x';
+    x.setAttribute('aria-label', '閉じる');
+    x.textContent = '×';
+    x.onclick = () => box.remove();
+    box.append(msg, go, x);
+    document.body.append(box);
+  }
+
+  timer = setInterval(check, 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+})();
+</script>
+
+<main>
+  <h1>xdnet311491/internet archive☆</h1>
+  <nav class="tabs">
+    <label for="t-home">ホーム</label>
+    <label for="t-pages">お遊びコーナー</label>
+    <label for="t-channels">チャンネル</label>
+    <label for="t-fukyou">布教部屋</label>
+    <label for="t-screen">画面設定</label><label for="t-sound">サウンド設定</label>
+    <!-- 新しいタブを増やすときは、この「開発者機能」より上に足す (開発者機能はいつもいちばん右) -->
+    <label for="t-dev" class="t-dev">開発者機能</label>
+  </nav>
+  <section class="panel p-home">
+    <div class="dm"><div class="dm-h1" role="heading" aria-level="2">悲報　鯖主(Akafuyu)　生誕14周年</div><div class="dm-gap"></div><div class="dm-t">　何が悲報だよ（笑）</div><div class="dm-gap"></div><div class="dm-gap"></div><div class="dm-gap"></div><div class="dm-t">うおおおおおお力がみなぎって来たぜー(ドパガキ)</div><div class="dm-gap"></div><div class="dm-gap"></div><div class="dm-gap"></div><div class="dm-h1" role="heading" aria-level="2">大見出し (# あ)</div><div class="dm-h2" role="heading" aria-level="3">中見出し (## あ)</div><div class="dm-h3" role="heading" aria-level="4">小見出し (### あ)</div><div class="dm-sub">小さい文字 (-# あ)</div><div class="dm-gap"></div><div class="dm-t"><strong>太字</strong> <em>斜体</em> <em>斜体</em> <u>下線</u> <s>取り消し線</s> <span class="dm-sp" tabindex="0" role="button" aria-label="ネタバレ (押すと表示)">ネタバレ(押すと見える)</span><br><strong><em>太字+斜体</em></strong> <u><strong>下線+太字</strong></u> <u><em>下線+斜体</em></u> <s><strong>取り消し+太字</strong></s><br>snake_case_name は斜体にならない / 2<em>3</em>4 は斜体になる</div><div class="dm-gap"></div><div class="dm-t"><code class="dm-ic">インラインコード</code> と <code class="dm-ic">中に ` を含むコード</code></div><div class="dm-gap"></div><pre class="dm-cb" data-lang="py"><code>print(&quot;コードブロック&quot;)
+# ここは # でも見出しにならない **太字にもならない**</code></pre><div class="dm-gap"></div><blockquote class="dm-q"><div class="dm-t">引用 1行目<br>引用 2行目 <strong>太字もOK</strong></div></blockquote><div class="dm-gap"></div><ul class="dm-l"><li>箇条書き A</li><li>箇条書き B<ul class="dm-l"><li>入れ子 B-1</li><li>入れ子 B-2</li></ul></li><li>アスタリスクでもOK</li></ul><div class="dm-gap"></div><ol class="dm-l"><li>番号つき 1</li><li>番号つき 2<ul class="dm-l"><li>番号の下に箇条書き</li></ul></li></ol><div class="dm-gap"></div><div class="dm-t"><a href="https://example.com" target="_blank" rel="noopener noreferrer">リンク</a> / <a href="https://example.com/auto" target="_blank" rel="noopener noreferrer">https://example.com/auto</a> / <a href="https://example.com/bare" target="_blank" rel="noopener noreferrer">https://example.com/bare</a>.<br># これは見出しにならない *これは斜体にならない*</div><div class="dm-gap"></div><div class="dm-t">今の時刻: <time class="dm-ts" data-ts="1794141855" data-st="F">&lt;t:1794141855:F&gt;</time> / <time class="dm-ts" data-ts="1794141855" data-st="R">&lt;t:1794141855:R&gt;</time> / <time class="dm-ts" data-ts="1794141855" data-st="t">&lt;t:1794141855:t&gt;</time></div><div class="dm-gap"></div><blockquote class="dm-q"><div class="dm-t">ここから最後まで全部が引用<br>複数行でも <strong>太字</strong> でも</div><pre class="dm-cb" data-lang=""><code>コードも入れられる</code></pre></blockquote></div>
+    <p class="visits" id="visits" hidden>合計閲覧者数 <b id="visits-n">…</b> 人</p>
+    <label class="back" for="enter" role="button" tabindex="0">オープニング画面に戻る</label>
+  </section>
+  <section class="panel p-pages"><ul class="list"><li><a href="pages/ai-chat.html"><span class="name">AIチャット</span><span class="desc">自分のAPIキーでつなぐAIチャット。プロンプト設定・画像/音声/動画の添付・読み上げ対応(Gemini / OpenRouter / Groq)</span></a></li><li><a href="pages/bgremove.html"><span class="name">背景切り抜きメーカー</span><span class="desc">画像の背景を消して透明なPNGにする。AI(無料・端末内で処理)と、色で消す方法の2種類</span></a></li><li><a href="pages/crop_tool.html"><span class="name">ごめんなさい、開発者用機能ですorz</span><span class="desc">crop_tool.html</span></a></li><li><a href="pages/line-test.html"><span class="name">回線テスト</span><span class="desc">ping・ジッター・ダウンロード/アップロード速度をブラウザだけで測る</span></a></li><li><a href="pages/quake.html"><span class="name">強震モニター</span><span class="desc">防災科研の強震モニターを地図に重ねて表示。直近の震度情報つき</span></a></li><li><a href="pages/symmetry.html"><span class="name">シンメトリ画像メーカー</span><span class="desc">画像の半分(または1/4)を鏡のように折り返して、左右・上下・四方向対称の画像を作る</span></a></li></ul>
+    <div class="viewer"><div class="vbar"><button type="button" class="vback">← 一覧に戻る</button><span class="vtitle"></span></div>
+    <iframe title="お遊びコーナー"></iframe></div></section>
+  <section class="panel p-channels"><ul class="list"><li><a href="https://www.youtube.com/@8111F_NodaLine" target="_blank" rel="noopener noreferrer"><span class="name">YouTubeチャンネル</span><span class="desc">オデ🤓は面白い😤😤😤</span></a></li><li><a href="https://x.com/@rapid313_nagoya" target="_blank" rel="noopener noreferrer"><span class="name">X</span><span class="desc">自慢とかくだらないお話</span></a></li><li><a href="https://discord.com/oauth2/authorize?client_id=1341385377813889054&amp;permissions=8&amp;integration_type=0&amp;scope=bot+applications.commands" target="_blank" rel="noopener noreferrer"><span class="name">DiscordBot</span><span class="desc">あかふゆの技術力は世界一(要審議)</span></a></li><li><a href="https://www.roblox.com/ja/users/4991709658/profile" target="_blank" rel="noopener noreferrer"><span class="name">Roblox</span><span class="desc">ガキのお遊びだけどガキなので</span></a></li><li><a href="http://guns.lol/xdnet_311491" target="_blank" rel="noopener noreferrer"><span class="name">guns.lol</span><span class="desc">LOL</span></a></li></ul></section>
+  <section class="panel p-fukyou"><div class="fk-view" id="fk-root"><ul class="list"><li><a href="#" class="fk-card has-img" data-go="fk-r0" style="--img:url(siryou/purana.png);--pos:29% 30%"><span class="name">Blue Archive</span><span class="desc">Blue Archiveの個人的好きなキャラ(生徒)紹介です</span></a></li><li><a href="#" class="fk-card has-img" data-go="fk-r1" style="--img:url(siryou/tokyo.jpg);--pos:46% 66%"><span class="name">ウマ娘プリティーダービー</span><span class="desc">開發とちゅ、ゥｗ</span></a></li></ul></div>
+    <div class="fk-view" id="fk-r0" hidden><div class="vbar"><button type="button" class="vback fk-back" data-go="fk-root">← 戻る</button><span class="vtitle">Blue Archive</span></div><div class="dm fk-intro"><div class="dm-t">以下からキャラ(生徒)を選択して<strong>何やってるんですか！勉強してください！</strong>をしよう</div></div><ul class="list"><li><a href="#" class="fk-card has-img" data-go="fk-i0-0" style="--img:url(siryou/key.png);--pos:43% 29%"><span class="name">天童ケイ</span><span class="desc">ケイちゃんかわいいかわいいかわいいかわいいかわいいかわいいかわいいかわいいかわいいかわいいかわいい</span></a></li><li><a href="#" class="fk-card has-img" data-go="fk-i0-1" style="--img:url(siryou/natu.jpg);--pos:47% 19%"><span class="name">柚鳥ナツ</span><span class="desc">おお/ぎうにうの時間/かんしゃあ～/おっけおっけ/糖分が、足りない！(迫真)</span></a></li></ul></div>
+    <div class="fk-view" id="fk-i0-0" hidden><div class="vbar"><button type="button" class="vback fk-back" data-go="fk-r0">← 戻る</button><span class="vtitle">Blue Archive › 天童ケイ</span></div><div class="fk-detail"><img class="fk-img" src="siryou/key.png" alt="天童ケイ" loading="lazy"><div class="dm fk-body"><div class="dm-h2" role="heading" aria-level="2">天童ケイ</div><div class="dm-h1" role="heading" aria-level="2">ケイちゃんってかわいい！</div><div class="dm-gap"></div><pre class="dm-cb" data-lang=""><code>1. 概要とプロフィール
+
+    名前：天童ケイ（てんどう けい） ※ガチャ加入時は「ケイ」表記
+
+    学園・所属：ミレニアムサイエンススクール特異現象捜査部（ゲーム開発部と兼部）
+
+    学年・年齢：1年生 / ？？歳
+
+    誕生日・身長：3月25日 / 152cm（どちらもアリスと同値）
+
+    CV：田中美海
+
+ミレニアムのストーリーのキーパーソンであったAI「ケイ」が、様々な経緯を経て人型の身体を手に入れ、新たに確立した姿。アリスと同じ誕生日であることや、表向き「転校してきたアリスの双子の妹」という扱いになっている点から、ミレニアムの1年生として一つのアイデンティティを得て生きていくことを決断した。</code></pre><pre class="dm-cb" data-lang=""><code>2. 名前とプロフィール変化のギミック
+
+メインストーリー『デカグラマトン編』の連動イベント「鋼鉄大陸攻略戦」最終盤にて、アリスが家族の証として「天童」の苗字を授けたことで「天童ケイ」となった。
+ゲーム内でもこのストーリーの進捗に連動し、最後までクリアするとガチャ画面等のプロフィール表記が「ケイ」から「天童ケイ」に変化し、自己紹介欄も大幅に書き下ろされるという異例の演出・ギミックが用意されている。</code></pre><pre class="dm-cb" data-lang=""><code>3. 人物像と性格
+
+    外見・身体：アリスを左右反転・色反転させたような姿で、大きな黒いリボンが特徴。機械的な要素は薄く、血色や負傷時の赤い血など、有機性質の強い身体へと再構築されている。
+
+    性格：
+
+        元オペレーターAIゆえに頭の回転が早く、参謀や解説役を務めることが多い。
+
+        根が生真面目で大変な世話焼き。アリスに対しては過保護な一方で、周囲のボケに振り回されがちな「ゲーム開発部のおかん兼ツッコミ担当」として定着している。
+
+        気丈で反骨精神が旺盛。かつての「従者」としての役割から脱却し、自分自身の意志で「ケイ」として生きる強い芯を持っている。
+
+        先生に対しては典型的なツンデレ気質であり、恥ずかしいところを突かれると激しく動揺するコミカルな一面も見せる。</code></pre><pre class="dm-cb" data-lang=""><code>4. 戦闘・ゲーム内性能
+
+    クラス：サポーター（STRIKER / BACK）
+
+    攻撃属性：神秘 / 防御属性：複合装甲（新登場）
+
+    固有武器：レールガン「エアレンデル：ルミナス・ノヴァ」
+
+    性能の特長：
+
+        低コストのEXスキルで、指定範囲に味方の攻撃力アップと強力な神秘特効加算のフィールドを展開する。
+
+        バフ終了時に、範囲内の味方が与えたダメージを蓄積して敵へ叩き込むノーマルスキルを発動する。
+
+        特殊装甲ボスに対する強力な火力支援要員として、実装時の制約解除決戦（コクマー）等で圧倒的な適性を発揮している。
+
+        通常アリス、臨戦アリスのどちらとも同時出撃時に専用の特殊勝利モーションが発生する。</code></pre><pre class="dm-cb" data-lang=""><code>5. 主な人間関係
+
+    天童アリス：元主人であり、現在は義姉妹（アリスが姉、ケイが妹）。互いに対等な存在として接しており、アリスを非常に大切に思っている。
+
+    先生：かつての敵対関係から和解。「ケイ」としての自己を構築するきっかけをくれた存在であり、普段はツンデレな態度をとりつつも特別な信頼を寄せている。
+
+    調月リオ：自身の復活と身体の用意に尽力してくれた人物。親子的とも言える関係性があり、時折リオの部屋の片付けなど世話を焼いている。
+
+    才羽モモイ：ゲーム開発部の問題児。生活態度のルーズさなどに苦言を呈しつつも、良いコンビとして賑やかなやり取りを見せている。
+
+-# Geminiがまとめました</code></pre><pre class="dm-cb" data-lang=""><code># 個人的思うこと
+ ・わたすの最推し
+ ・ストーリー性があるから大好きなんだよなあ！！！！！(某あの人)
+ ・ツンデレ大好き！(属性)
+ ・一部総力戦とか大決戦以外で使う機会はないかな
+ ・黒ケイ(どういうものかは参照)もすげえかわいいんだな
+ </code></pre></div></div></div>
+    <div class="fk-view" id="fk-i0-1" hidden><div class="vbar"><button type="button" class="vback fk-back" data-go="fk-r0">← 戻る</button><span class="vtitle">Blue Archive › 柚鳥ナツ</span></div><div class="fk-detail"><img class="fk-img" src="siryou/natu.jpg" alt="柚鳥ナツ" loading="lazy"><div class="dm fk-body"><div class="dm-h2" role="heading" aria-level="2">柚鳥ナツ</div><div class="dm-h1" role="heading" aria-level="2">不思議っ子好きすぎて毎日真似して遊んでる←きも←一人称が「き」の可能性</div><div class="dm-gap"></div><pre class="dm-cb" data-lang=""><code>1. 概要とプロフィール
+
+    名前：柚鳥ナツ（ゆとり なつ）
+
+    学園・所属：トリニティ総合学園 1年生 / 放課後スイーツ部
+
+    年齢・誕生日：15歳 / 12月4日
+
+    身長：152cm
+
+    趣味：ロマンチックなこと、思索
+
+    CV：長縄まりあ
+
+トリニティ総合学園の1年生で、放課後スイーツ部に所属する少女。
+マイペースかつ哲学者・ロマンチストな性格で、「ロマンを共有したい」という思いから不思議な言動で周りを煙に巻くことが多い。トリニティ上層部の派閥争いなどには無関心な一方、本質を見抜く鋭い洞察力を発揮することもある。牛乳とお菓子（スイーツ）が大好物。</code></pre><pre class="dm-cb" data-lang=""><code>2. 人物像と性格
+
+    「ロマン」の探求者：幅広いロマンの基準を持ち、カズサの過去に乗っかって「放課後スイーツ団」を名乗るなど独特な感性を発揮する。絆ストーリーではお菓子を教材にして「ロマン」を伝授しようとする。
+
+    鋭い観察眼：生徒会（ティーパーティー）の単語を純粋なお茶会と勘違いしている節がある一方、デモ活動の空気を「大半の生徒は何のデモか分かってないのでは」と冷静に指摘するなど、物事の本質を突く目を持つ。
+
+    裕福な背景：トリニティの生徒らしく金銭的余裕があり、バンドを結成した際には自前で楽器を用意している。</code></pre><pre class="dm-cb" data-lang=""><code>3. 衣装バリエーション
+
+    通常版：制服姿にライオットシールド（透明なポリカーボネート製、スイーツ部のエンブレム入り）を装備。
+
+    体操服：イベント「GetSet,GO！～キヴォトス晄輪大祭～」の障害物競走で登場。「なまこソーダ」なるゲテモノを飲み、立ったまま気絶してヘイローが消える珍事を起こした。
+
+    バンド版：イベント「-ive_aLIVE!」で登場したガールズバンド「シュガーラッシュ」の衣装。ドラムと事務を担当し、いつもの「ロマン」を「ロック」に置き換えている（※2025年復刻イベントにて恒常★3生徒として実装）。</code></pre><pre class="dm-cb" data-lang=""><code>4. 戦闘・ゲーム内性能（通常版）
+
+    クラス：タンク（STRIKER / FRONT）
+
+    攻撃属性：神秘 / 防御属性：重装甲
+
+    固有武器：サブマシンガン「ビヨンド・ザ・ルミネーション」
+
+    性能の特長：
+
+        自身回復＋デバフ解除：EXスキル（コスト3）で自身のHPを回復しつつ、弱体状態（デバフ）を1つ解除できる。サブスキルで使用ごとに回復量・被回復率が強化される。
+
+        味方への攻撃力バフ：ノーマルスキルで近くの味方にパイを投げ、最大3人まで攻撃力バフを付与する。NSバフのため他生徒のEXバフと重複可能。
+
+        ペロロジラ適性：定期的に強力なデバフを付与してくる総力戦・大決戦「ペロロジラ」において、単体でデバフ受け＆即座解除が可能なため極めて高い適正を持つ。
+
+        臨戦ホシノとの判別注意：ペロロジラ戦で同時起用される「臨戦ホシノ（アタッカー）」と後ろ姿やアイコンの配色（ピンク髪ポニテ）が酷似しており、バフの対象選択を間違える事故が発生しやすい。</code></pre><pre class="dm-cb" data-lang=""><code>5. 関連ネタ・ミーム・人間関係
+
+    ネットミーム「かんしゃあ！」：他の生徒から回復を受けた際の「感謝ー！」というボイスの発音やイントネーションが独特で可愛らしいことから、MAD動画の素材等として親しまれている（2024年7月のアプデで字幕追加）。
+
+    百合園セイア：イベント「Code:BOX」などで交流。小難しい言い回しを好む者同士、ナツの独特な表現に理解を示し通じ合う描写（ナツセイ）が見られた。
+
+    -# Geminiがまとめました</code></pre><pre class="dm-cb" data-lang=""><code># 個人的思うこと
+・不思議っ子って本当に穏やか
+・おお
+・2024年から2025年最後までの最推しらしい
+・スイーツよりナツを食べたい
+・よくちょこぷにでネタにされがち
+・バンドナツと通常ナツで結構変わりがち
+・大体ツバキに役目奪われがち(タンカーとして)</code></pre></div></div></div>
+    <div class="fk-view" id="fk-r1" hidden><div class="vbar"><button type="button" class="vback fk-back" data-go="fk-root">← 戻る</button><span class="vtitle">ウマ娘プリティーダービー</span></div><ul class="list"><li><a href="#" class="fk-card has-img" data-go="fk-i1-0" style="--img:url(siryou/logo.png)"><span class="name">サンプル作品C</span><span class="desc">小さい説明</span></a></li></ul></div>
+    <div class="fk-view" id="fk-i1-0" hidden><div class="vbar"><button type="button" class="vback fk-back" data-go="fk-r1">← 戻る</button><span class="vtitle">ウマ娘プリティーダービー › サンプル作品C</span></div><div class="fk-detail"><img class="fk-img" src="siryou/logo.png" alt="サンプル作品C" loading="lazy"><div class="dm fk-body"><div class="dm-h2" role="heading" aria-level="2">サンプル作品C</div><div class="dm-t">ここに文章を書く。</div></div></div></div></section>
+  <section class="panel p-screen"><nav class="subtabs" aria-label="画面設定の項目"><button type="button" data-sub="op" aria-selected="true">オープニング画面</button><button type="button" data-sub="wall" aria-selected="false">壁紙</button><button type="button" data-sub="btn" aria-selected="false">ボタン</button></nav><div class="sub" data-sub-panel="op"><div class="sw"><span class="sw-t">特殊モーション</span><button type="button" class="tgl" id="motion-toggle" aria-pressed="true">ON</button></div><p class="s-hint">特殊モーションが付いている曲: 4. ユメ先輩(身内ノリでは牛込柳町パーククリニック)のテーマ、10. ﾕｳｶの絆ダイアローグ、11. 彩りキャンバス。これらの曲を選んでいるときだけ、背景で動画が流れます。</p><p class="s-hint">設定のない曲は、これまで通り白い背景のオープニング画面になります。</p><p class="s-msg m-msg" role="status"></p></div><div class="sub" data-sub-panel="wall" hidden><h2>壁紙の変更</h2><p class="s-hint">選ぶと、その場で壁紙が切り替わります。動画はデータ通信量が大きいので、モバイル回線のときは大きさ(MB)に注意してください。</p><ul class="songs"><li><button type="button" class="song" data-kind="wall" data-id="wallpaper.mp4" data-src="siryou/wallpaper.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">1. mimori</span><span class="s-note">最初の壁紙</span><span class="s-tag">動画 0.9MB</span></span><span class="s-badge">選択中</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper2.mp4" data-src="siryou/wallpaper2.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">2. serina</span><span class="s-tag">動画 1.8MB</span></span><span class="s-badge">選択中</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper3.mp4" data-src="siryou/wallpaper3.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">3. kei1</span><span class="s-tag">動画 6.5MB</span></span><span class="s-badge">選択中</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper4.mp4" data-src="siryou/wallpaper4.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">4. kei2</span><span class="s-tag">動画 2.2MB</span></span><span class="s-badge">選択中</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper5.mp4" data-src="siryou/wallpaper5.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">5. mary</span><span class="s-tag">動画 1.5MB</span></span><span class="s-badge">選択中</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper6.mp4" data-src="siryou/wallpaper6.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">6. jyunko</span><span class="s-tag">動画 2.3MB</span></span><span class="s-badge">選択中</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper7.mp4" data-src="siryou/wallpaper7.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">7. chise</span><span class="s-tag">動画 0.9MB</span></span><span class="s-badge">選択中</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper8.mp4" data-src="siryou/wallpaper8.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">8. shigure</span><span class="s-tag">動画 1.9MB</span></span><span class="s-badge">選択中</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper9.mp4" data-src="siryou/wallpaper9.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">9. miyako</span><span class="s-tag">動画 5.4MB</span></span><span class="s-badge">選択中</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper10.mp4" data-src="siryou/wallpaper10.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">10. azusa</span><span class="s-tag">動画 5.8MB</span></span><span class="s-badge">選択中</span></button></li></ul><p class="s-msg w-msg" role="status"></p></div><div class="sub" data-sub-panel="btn" hidden><h2>ボタンの透明度</h2><p class="s-hint">ボタンやカードなど、押せる部分の背景の濃さを変えます。左いっぱい = 透明、右いっぱい = 完全不透明です。初めは 25% です。選んだ値は、次にサイトを開いたときも使われます。</p><div class="vols" role="group" aria-label="ボタンの透明度"><div class="vol"><label class="vol-t" for="btn-alpha">ボタンの濃さ</label><input type="range" id="btn-alpha" min="0" max="100" step="1" value="25"><output for="btn-alpha">25%</output></div></div><div class="sw"><span class="sw-t">初期値に戻す</span><button type="button" class="tgl" id="btn-alpha-reset">リセット</button></div><p class="s-hint">ボタンにカーソルを合わせると、右端から暗くなって、少し大きくなります。</p></div></section><section class="panel p-sound"><div class="sw"><span class="sw-t">音楽</span><button type="button" class="tgl" id="music-toggle" aria-pressed="false">OFF</button></div><div class="sw"><span class="sw-t">オープニングと一体化</span><button type="button" class="tgl" id="unify-toggle" aria-pressed="false">OFF</button></div><p class="s-hint">ONにすると、オープニングの曲が入場しても切り替わらず、そのままメイン画面でも流れ続けます(音量だけメイン画面用になります)。このあいだ「メイン画面」の曲は使われません。</p><p class="s-msg u-msg" role="status"></p><div class="sw"><span class="sw-t">カーソル効果音</span><button type="button" class="tgl" id="cursor-toggle" aria-pressed="false">OFF</button></div><p class="s-hint">ボタンにカーソルを合わせたときの音です(マウスのときだけ鳴ります)。</p><div class="vols" role="group" aria-label="音量"><div class="vol"><label class="vol-t" for="vol-op">オープニング曲</label><input type="range" id="vol-op" min="0" max="100" step="1" value="70"><output for="vol-op">70%</output></div><div class="vol"><label class="vol-t" for="vol-main">メイン画面の曲</label><input type="range" id="vol-main" min="0" max="100" step="1" value="60"><output for="vol-main">60%</output></div></div><nav class="subtabs" aria-label="サウンド設定の項目"><button type="button" data-sub="op" aria-selected="true">オープニング画面</button><button type="button" data-sub="main" aria-selected="false">メイン画面</button></nav><div class="sub" data-sub-panel="op"><h2>オープニング曲の変更</h2><p class="s-hint">選んだ曲は、次にサイトを開いたときのオープニング画面で流れます。▶ で試し聴きできます。</p><ul class="songs"><li><button type="button" class="song" data-kind="op" data-id="op1.mp3" data-src="siryou/op1.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">1. Aoharu Band Arrange</span><span class="s-note">最初に流れる曲</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op1.mp3" data-src="siryou/op1.mp3" aria-pressed="false" aria-label="1. Aoharu Band Arrangeを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op2.mp3" data-src="siryou/op2.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">諸事情により削除済</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op2.mp3" data-src="siryou/op2.mp3" aria-pressed="false" aria-label="諸事情により削除済を試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op3.mp3" data-src="siryou/op3.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">3. Rolling Beat</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op3.mp3" data-src="siryou/op3.mp3" aria-pressed="false" aria-label="3. Rolling Beatを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op4.mp3" data-src="siryou/op4.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">4. ユメ先輩(身内ノリでは牛込柳町パーククリニック)のテーマ</span><span class="s-tag">特殊モーション</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op4.mp3" data-src="siryou/op4.mp3" aria-pressed="false" aria-label="4. ユメ先輩(身内ノリでは牛込柳町パーククリニック)のテーマを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op5.mp3" data-src="siryou/op5.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">5. OperationD</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op5.mp3" data-src="siryou/op5.mp3" aria-pressed="false" aria-label="5. OperationDを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op6.mp3" data-src="siryou/op6.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">6. Dreaming Trip</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op6.mp3" data-src="siryou/op6.mp3" aria-pressed="false" aria-label="6. Dreaming Tripを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op7.mp3" data-src="siryou/op7.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">7. Welcome School</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op7.mp3" data-src="siryou/op7.mp3" aria-pressed="false" aria-label="7. Welcome Schoolを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op8.mp3" data-src="siryou/op8.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">8. Our Oath</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op8.mp3" data-src="siryou/op8.mp3" aria-pressed="false" aria-label="8. Our Oathを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op9.mp3" data-src="siryou/op9.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">9. Alkaline tears</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op9.mp3" data-src="siryou/op9.mp3" aria-pressed="false" aria-label="9. Alkaline tearsを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op10.mp3" data-src="siryou/op10.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">10. ﾕｳｶの絆ダイアローグ</span><span class="s-tag">特殊モーション</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op10.mp3" data-src="siryou/op10.mp3" aria-pressed="false" aria-label="10. ﾕｳｶの絆ダイアローグを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op11.mp3" data-src="siryou/op11.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">11. 彩りキャンバス</span><span class="s-tag">特殊モーション</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op11.mp3" data-src="siryou/op11.mp3" aria-pressed="false" aria-label="11. 彩りキャンバスを試し聴き">▶</button></li></ul><p class="s-msg" role="status"></p></div><div class="sub" data-sub-panel="main" hidden><h2>メイン画面の曲の変更</h2><p class="s-hint">選ぶと、いま流れているメイン画面の曲がすぐ切り替わります。▶ で試し聴きできます。</p><ul class="songs"><li><button type="button" class="song" data-kind="main" data-id="sound.mp3" data-src="siryou/sound.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">1. Unwelcome School(8bit remix)</span><span class="s-note">最初に流れる曲</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="main" data-id="sound.mp3" data-src="siryou/sound.mp3" aria-pressed="false" aria-label="1. Unwelcome School(8bit remix)を試し聴き">▶</button></li><li><button type="button" class="song" data-kind="main" data-id="sound2.mp3" data-src="siryou/sound2.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">2. Step by Step</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="main" data-id="sound2.mp3" data-src="siryou/sound2.mp3" aria-pressed="false" aria-label="2. Step by Stepを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="main" data-id="sound3.mp3" data-src="siryou/sound3.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">3. Romantic Smile</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="main" data-id="sound3.mp3" data-src="siryou/sound3.mp3" aria-pressed="false" aria-label="3. Romantic Smileを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="main" data-id="sound4.mp3" data-src="siryou/sound4.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">4. Midsummer Cat</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="main" data-id="sound4.mp3" data-src="siryou/sound4.mp3" aria-pressed="false" aria-label="4. Midsummer Catを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="main" data-id="sound5.mp3" data-src="siryou/sound5.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">5. Walktrought</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="main" data-id="sound5.mp3" data-src="siryou/sound5.mp3" aria-pressed="false" aria-label="5. Walktroughtを試し聴き">▶</button></li></ul><p class="s-msg" role="status"></p></div></section>
+  <section class="panel p-dev"><div class="dev-lock" id="dev-lock"><p class="s-hint">パスワードを入力してください。</p><div class="dev-row"><input type="password" id="dev-pw" class="dev-pw" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="パスワード"><button type="button" class="tgl" id="dev-go">入る</button></div><p class="s-msg" id="dev-msg" role="status"></p></div><div class="dev-body" id="dev-body" hidden><h2>開発者機能</h2><div class="sw"><span class="sw-t">この版のID</span><code class="dev-code" id="dev-build">-</code></div><div class="sw"><span class="sw-t">閲覧者数の「カウント済み」を解除</span><button type="button" class="tgl" id="dev-recount">解除</button></div><div class="sw"><span class="sw-t">保存した設定をすべて消す</span><button type="button" class="tgl" id="dev-reset">消す</button></div><div class="sw"><span class="sw-t">ロックする</span><button type="button" class="tgl" id="dev-relock">ロック</button></div><p class="s-msg" id="dev-msg2" role="status"></p><div class="env-box" id="env-box"></div></div></section>
+</main>
+<script type="application/json" id="sound-cfg">{"opVolume": 0.7, "mainVolume": 0.6, "opFadeIn": 0.8, "opFadeOut": 2.0, "mainFadeIn": 2.5, "cursorSrc": "siryou/cursol.mp3", "cursorVolume": 0.5, "motions": {"op4.mp3": "siryou/motion4.mp4", "op10.mp3": "siryou/motion10.mp4", "op11.mp3": "siryou/motion11.mp4"}}</script>
+<script>
+(() => {
+  const root = document.documentElement;
+  const unlock = () => {
+    root.classList.remove('perm-on');
+    if (window.__permResolve) window.__permResolve();
+  };
+  try {
+    const cfg = JSON.parse(document.getElementById('sound-cfg').textContent);
+    const perm = document.querySelector('.perm');
+    const enter = document.getElementById('enter');
+    const toggle = document.getElementById('music-toggle');
+    const songBtns = [...document.querySelectorAll('.song[data-kind="op"]')];
+    const mainBtns = [...document.querySelectorAll('.song[data-kind="main"]')];
+    const pvBtns = [...document.querySelectorAll('.pv')];
+    const KEY = 'osaito-op-song', MKEY_SONG = 'osaito-main-song', UKEY = 'osaito-unify';
+    // ---- 音量 (サウンド設定のスライダー。端末に覚えておく) ----
+    const VKEY_OP = 'osaito-vol-op', VKEY_MAIN = 'osaito-vol-main';
+    const clamp01 = (n) => Math.max(0, Math.min(1, n));
+    const loadVol = (k, def) => {
+      try { const v = parseFloat(localStorage.getItem(k)); if (isFinite(v)) return clamp01(v); } catch (e) { /* 保存できない環境 */ }
+      return def;
+    };
+    let opVol = loadVol(VKEY_OP, cfg.opVolume);
+    let mainVol = loadVol(VKEY_MAIN, cfg.mainVolume);
+
+    // iPhone は audio.volume を無視するので、音量の変化は WebAudio で行う。
+    // (index.html を file:// で直接開いたときは WebAudio が無音になるので、その場合だけ volume を使う)
+    const AC = window.AudioContext || window.webkitAudioContext;
+    const useWebAudio = !!AC && location.protocol !== 'file:';
+    let ctx = null, musicOn = false, decided = false;
+    let opTrack = null, mainTrack = null, prev = null;
+    const previews = new Map();
+
+    function ensureCtx() {
+      if (!useWebAudio) return;
+      if (!ctx) { try { ctx = new AC(); } catch (e) { ctx = null; } }
+      if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+    }
+
+    function makeTrack(src, loop) {
+      const el = new Audio();
+      el.preload = 'auto';
+      el.loop = loop;
+      el.src = src;
+      const t = { el, gain: null, level: 0, timer: 0, doneTimer: 0 };
+      if (ctx) {
+        try {
+          const node = ctx.createMediaElementSource(el);
+          t.gain = ctx.createGain();
+          t.gain.gain.value = 0;
+          node.connect(t.gain);
+          t.gain.connect(ctx.destination);
+        } catch (e) { t.gain = null; }
+      }
+      if (!t.gain) el.volume = 0;
+      return t;
+    }
+
+    // 音量を sec 秒かけて to (0〜1) にする。終わったら done を呼ぶ
+    function fade(t, to, sec, done) {
+      clearInterval(t.timer);
+      clearTimeout(t.doneTimer);
+      const from = t.level;
+      t.level = to;
+      if (t.gain) {
+        const g = t.gain.gain, now = ctx.currentTime;
+        g.cancelScheduledValues(now);
+        g.setValueAtTime(g.value, now);
+        g.linearRampToValueAtTime(to, now + Math.max(sec, 0.01));
+      } else {
+        const t0 = performance.now();
+        t.timer = setInterval(() => {
+          const k = sec <= 0 ? 1 : Math.min(1, (performance.now() - t0) / (sec * 1000));
+          t.el.volume = Math.max(0, Math.min(1, from + (to - from) * k));
+          if (k >= 1) clearInterval(t.timer);
+        }, 40);
+      }
+      if (done) t.doneTimer = setTimeout(done, sec * 1000);
+    }
+
+    function start(t, vol, sec) {
+      const p = t.el.play();
+      if (p && p.catch) p.catch(() => {});
+      fade(t, vol, sec);
+    }
+    function stop(t, sec) { fade(t, 0, sec, () => t.el.pause()); }
+
+    // iPhone 対策: 「はい」を押した瞬間に一度だけ再生して止めておくと、あとで自動で鳴らせる
+    function prime(t) {
+      const p = t.el.play();
+      if (p && p.then) p.then(() => { t.el.pause(); t.el.currentTime = 0; }).catch(() => {});
+    }
+
+    // ---- オープニング曲の選択 (選んだ曲は端末に覚えておく) ----
+    const songs = songBtns.filter((b) => !b.disabled).map((b) => ({ id: b.dataset.id, src: b.dataset.src }));
+    let chosen = null;
+    try { chosen = localStorage.getItem(KEY); } catch (e) { /* 保存できない環境 */ }
+    const pick = () => songs.find((s) => s.id === chosen) || songs[0] || null;
+    const markSelected = () => {
+      const cur = pick();
+      songBtns.forEach((b) => b.setAttribute('aria-pressed', String(!!cur && b.dataset.id === cur.id)));
+    };
+    const say = (btn, text) => {
+      const sub = btn.closest('.sub');
+      const m = sub ? sub.querySelector('.s-msg') : null;
+      if (m) m.textContent = text;
+    };
+
+    // ---- メイン画面の曲の選択 / オープニングとの一体化 (どちらも端末に覚えておく) ----
+    const mainSongs = mainBtns.filter((b) => !b.disabled).map((b) => ({ id: b.dataset.id, src: b.dataset.src }));
+    let mainChosen = null;
+    try { mainChosen = localStorage.getItem(MKEY_SONG); } catch (e) { /* 保存できない環境 */ }
+    const pickMain = () => mainSongs.find((s) => s.id === mainChosen) || mainSongs[0] || null;
+    const markMain = () => {
+      const cur = pickMain();
+      mainBtns.forEach((b) => b.setAttribute('aria-pressed', String(!!cur && b.dataset.id === cur.id)));
+    };
+    let unified = false;
+    try { unified = localStorage.getItem(UKEY) === 'on'; } catch (e) { /* 保存できない環境 */ }
+    const uToggle = document.getElementById('unify-toggle');
+    const syncUnify = () => {
+      if (!uToggle) return;
+      uToggle.setAttribute('aria-pressed', String(unified));
+      uToggle.textContent = unified ? 'ON' : 'OFF';
+    };
+    // 入場後のメイン画面で流れる曲。一体化のときは、オープニング曲がそのまま続く
+    const bgm = () => (unified && opTrack) ? opTrack : mainTrack;
+
+    // ---- 特殊モーション: 選ばれている曲に動画が設定されていたら、OP画面の背景で流す ----
+    const gate = document.querySelector('.gate');
+    const mVid = document.querySelector('.op-motion');
+    const mToggle = document.getElementById('motion-toggle');
+    const mMsg = document.querySelector('.m-msg');
+    const MKEY = 'osaito-op-motion';
+    const motions = cfg.motions || {};
+    const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let motionOn = true;  // 初期はON
+    try { if (localStorage.getItem(MKEY) === 'off') motionOn = false; } catch (e) { /* 保存できない環境 */ }
+
+    function syncMotionToggle() {
+      if (!mToggle) return;
+      mToggle.setAttribute('aria-pressed', String(motionOn));
+      mToggle.textContent = motionOn ? 'ON' : 'OFF';
+    }
+
+    // いま選ばれている曲に合わせて、背景動画を出す/消す。動画が再生できる状態になったら解決する Promise を返す
+    function applyMotion() {
+      if (!gate || !mVid) return Promise.resolve();
+      const cur = pick();
+      const src = motionOn && !reduceMotion && cur ? (motions[cur.id] || '') : '';
+      if (!src) {
+        gate.classList.remove('has-motion');  // 白背景に戻る (消えきってから動画を止める)
+        setTimeout(() => { if (!gate.classList.contains('has-motion')) mVid.pause(); }, 900);
+        return Promise.resolve();
+      }
+      return new Promise((resolve) => {
+        let fin = false;
+        const ok = () => { if (fin) return; fin = true; clearTimeout(tm); resolve(); };
+        const tm = setTimeout(ok, 12000);  // 重すぎるときは、待たずに先へ進む
+        const go = () => {
+          try { mVid.currentTime = 0; } catch (e) { /* まだ読み込み中 */ }
+          const p = mVid.play();
+          const show = () => { gate.classList.add('has-motion'); ok(); };
+          if (p && p.then) p.then(show, ok); else show();
+        };
+        if (mVid.dataset.cur === src && mVid.readyState >= 3) { go(); return; }
+        if (mVid.dataset.cur !== src) { mVid.dataset.cur = src; mVid.src = src; mVid.load(); }
+        mVid.addEventListener('canplay', go, { once: true });
+        mVid.addEventListener('error', ok, { once: true });
+      });
+    }
+
+    if (enter) {
+      enter.addEventListener('change', () => {
+        if (enter.checked) {
+          // 入場したら、見えなくなってから動画を止める (電池と通信の節約)
+          setTimeout(() => { if (enter.checked && mVid) mVid.pause(); }, 900);
+        } else {
+          applyMotion();  // OP画面に戻ったら、いま選んでいる曲に合わせて出し直す
+        }
+      });
+    }
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && mVid && gate && gate.classList.contains('has-motion') && enter && !enter.checked && mVid.paused) {
+        const p = mVid.play(); if (p && p.catch) p.catch(() => {});
+      }
+    });
+
+    if (mToggle) {
+      mToggle.addEventListener('click', () => {
+        motionOn = !motionOn;
+        let saved = true;
+        try { localStorage.setItem(MKEY, motionOn ? 'on' : 'off'); } catch (e) { saved = false; }
+        syncMotionToggle();
+        if (mMsg) {
+          mMsg.textContent = (motionOn
+            ? '特殊モーションをONにしました。特殊モーション付きの曲を選んでいると、オープニング画面の背景で動画が流れます。'
+            : '特殊モーションをOFFにしました。オープニング画面は白い背景になります。')
+            + (saved ? '' : '(この端末では保存できないため、ページを閉じると元に戻ります)');
+        }
+      });
+    }
+
+    function initTracks(withPrime) {
+      ensureCtx();
+      if (!opTrack) {
+        const s = pick();
+        if (s) { opTrack = makeTrack(s.src, true); opTrack.id = s.id; }
+      }
+      const m = pickMain();
+      if (!mainTrack && m) {
+        mainTrack = makeTrack(m.src, true);
+        mainTrack.id = m.id;
+        if (withPrime) prime(mainTrack);
+      }
+    }
+
+    function syncToggle() {
+      if (!toggle) return;
+      toggle.setAttribute('aria-pressed', String(musicOn));
+      toggle.textContent = musicOn ? 'ON' : 'OFF';
+    }
+
+    // ---- 最初の許可画面 ----
+    function decide(on) {
+      if (decided) return;
+      decided = true;
+      musicOn = on;
+      window.__motionReady = applyMotion();
+      if (on) {
+        initTracks(true);
+        if (opTrack) start(opTrack, opVol, cfg.opFadeIn);
+      }
+      syncToggle();
+      perm.classList.add('gone');
+      setTimeout(unlock, 520);  // 暗い画面が消えてから、OPアニメと読み込み待ちが始まる
+    }
+
+    // ---- 入場: ロード画面の曲を減衰させて、メイン画面の曲に交代 ----
+    // 「オープニング画面に戻る」を押したときは逆に、メイン画面の曲を消して、オープニング曲をもう一度流す
+    function restartOp() {
+      const s = pick();  // サウンド設定で選び直した曲があれば、それを流す
+      if (opTrack && (!s || opTrack.id !== s.id)) { opTrack.el.pause(); opTrack = null; }
+      if (!opTrack && s) { opTrack = makeTrack(s.src, true); opTrack.id = s.id; }
+      if (!opTrack) return;
+      try { opTrack.el.currentTime = 0; } catch (e) { /* まだ読み込み中 */ }
+      start(opTrack, opVol, cfg.opFadeIn);
+    }
+    if (enter) {
+      enter.addEventListener('change', () => {
+        if (!musicOn) return;
+        if (enter.checked) {
+          // 一体化: 曲はそのまま、音量だけメイン画面用に変える
+          if (unified && opTrack) { start(opTrack, mainVol, cfg.mainFadeIn); return; }
+          if (opTrack) stop(opTrack, cfg.opFadeOut);
+          if (mainTrack) start(mainTrack, mainVol, cfg.mainFadeIn);
+        } else {
+          stopPreview(false);
+          if (unified && opTrack) { start(opTrack, opVol, cfg.opFadeIn); return; }
+          if (mainTrack) {
+            fade(mainTrack, 0, cfg.opFadeOut, () => {
+              mainTrack.el.pause();
+              try { mainTrack.el.currentTime = 0; } catch (e) { /* まだ読み込み中 */ }
+            });
+          }
+          restartOp();
+        }
+      });
+    }
+
+    // ---- サウンド設定: 音楽 ON/OFF ----
+    if (toggle) {
+      toggle.addEventListener('click', () => {
+        if (musicOn) {
+          musicOn = false;
+          stopPreview(false);
+          [opTrack, mainTrack].forEach((t) => { if (t) stop(t, 0.6); });
+        } else {
+          musicOn = true;
+          initTracks(false);
+          if (enter && enter.checked) { const b = bgm(); if (b) start(b, mainVol, 1.2); }
+          else if (opTrack) start(opTrack, opVol, cfg.opFadeIn);
+        }
+        syncToggle();
+      });
+    }
+
+    // ---- サウンド設定: 項目タブ (いまは「オープニング画面」だけ。増やしてもそのまま動く) ----
+    const subBtns = [...document.querySelectorAll('.subtabs [data-sub]')];
+    subBtns.forEach((b) => b.addEventListener('click', () => {
+      const scope = b.closest('.panel') || document;  // サウンド設定と画面設定で、項目タブが混ざらないようにする
+      scope.querySelectorAll('.subtabs [data-sub]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+      scope.querySelectorAll('[data-sub-panel]').forEach((p) => { p.hidden = p.dataset.subPanel !== b.dataset.sub; });
+    }));
+
+    // ---- サウンド設定: 曲を選ぶ ----
+    songBtns.forEach((b) => b.addEventListener('click', () => {
+      if (b.disabled) return;
+      chosen = b.dataset.id;
+      let saved = true;
+      try { localStorage.setItem(KEY, chosen); } catch (e) { saved = false; }
+      markSelected();
+      const title = b.querySelector('.s-title').textContent;
+      const mo = motions[b.dataset.id] ? '(特殊モーション付き)' : '';
+      say(b, saved
+        ? '「' + title + '」を選びました' + mo + '。次にサイトを開いたとき、オープニングで流れます。'
+        : '「' + title + '」を選びましたが、この端末では保存できないため、ページを閉じると元に戻ります。');
+    }));
+
+    // ---- サウンド設定: メイン画面の曲を選ぶ (いま流れている曲は、すぐ切り替わる) ----
+    function swapMain() {
+      const m = pickMain();
+      if (mainTrack && (!m || mainTrack.id !== m.id)) {
+        const old = mainTrack;
+        mainTrack = null;
+        fade(old, 0, 1.2, () => old.el.pause());
+      }
+      if (musicOn && !mainTrack && m) { ensureCtx(); mainTrack = makeTrack(m.src, true); mainTrack.id = m.id; }
+    }
+    mainBtns.forEach((b) => b.addEventListener('click', () => {
+      if (b.disabled) return;
+      mainChosen = b.dataset.id;
+      let saved = true;
+      try { localStorage.setItem(MKEY_SONG, mainChosen); } catch (e) { saved = false; }
+      markMain();
+      swapMain();
+      const nowPlaying = musicOn && enter && enter.checked && !unified && !prev;
+      if (nowPlaying && mainTrack) start(mainTrack, mainVol, 1.2);
+      const title = b.querySelector('.s-title').textContent;
+      say(b, '「' + title + '」を選びました。'
+        + (unified ? '(いまはオープニングと一体化中なので、一体化をOFFにすると流れます)' : (nowPlaying ? 'メイン画面の曲を切り替えました。' : ''))
+        + (saved ? '' : '(この端末では保存できないため、ページを閉じると元に戻ります)'));
+    }));
+
+    // ---- サウンド設定: オープニングとの一体化 ----
+    if (uToggle) uToggle.addEventListener('click', () => {
+      unified = !unified;
+      let saved = true;
+      try { localStorage.setItem(UKEY, unified ? 'on' : 'off'); } catch (e) { saved = false; }
+      syncUnify();
+      if (musicOn && enter && enter.checked && !prev) {  // メイン画面で曲が流れていたら、すぐ切り替える
+        initTracks(false);
+        const mt = mainTrack;
+        if (unified && opTrack) {
+          if (mt) fade(mt, 0, 1.2, () => mt.el.pause());
+          start(opTrack, mainVol, 1.2);
+        } else {
+          if (opTrack) stop(opTrack, 1.2);
+          swapMain();
+          if (mainTrack) start(mainTrack, mainVol, 1.2);
+        }
+      }
+      const um = document.querySelector('.u-msg');
+      if (um) {
+        um.textContent = (unified
+          ? '一体化をONにしました。オープニングの曲が、メイン画面でもそのまま流れます。'
+          : '一体化をOFFにしました。メイン画面では「メイン画面」で選んだ曲が流れます。')
+          + (saved ? '' : '(この端末では保存できないため、ページを閉じると元に戻ります)');
+      }
+    });
+
+    // ---- サウンド設定: 試し聴き (聴いている間はメイン画面の曲を止める) ----
+    function stopPreview(restore) {
+      if (!prev) return;
+      const { t, btn } = prev;  // (prev.kind: 'op' | 'main')
+      prev = null;
+      btn.setAttribute('aria-pressed', 'false');
+      btn.textContent = '▶';
+      fade(t, 0, 0.3, () => { t.el.pause(); try { t.el.currentTime = 0; } catch (e) { /* まだ読み込み中 */ } });
+      const b = bgm();
+      if (restore && musicOn && b && enter && enter.checked) start(b, mainVol, 0.6);
+    }
+    pvBtns.forEach((btn) => btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      if (prev && prev.btn === btn) { stopPreview(true); return; }
+      stopPreview(false);
+      ensureCtx();
+      let t = previews.get(btn.dataset.id);
+      if (!t) {
+        t = makeTrack(btn.dataset.src, false);
+        previews.set(btn.dataset.id, t);
+        t.el.addEventListener('ended', () => { if (prev && prev.t === t) stopPreview(true); });
+      }
+      try { t.el.currentTime = 0; } catch (e) { /* まだ読み込み中 */ }
+      const kind = btn.dataset.kind === 'main' ? 'main' : 'op';
+      prev = { t, btn, kind };
+      btn.setAttribute('aria-pressed', 'true');
+      btn.textContent = '■';
+      const cur = bgm();
+      if (cur) fade(cur, 0, 0.4, () => cur.el.pause());
+      start(t, kind === 'main' ? mainVol : opVol, 0.4);
+    }));
+
+    // ---- サウンド設定: 音量スライダー (鳴っている曲には、動かしている間すぐ反映する) ----
+    const volOp = document.getElementById('vol-op');
+    const volMain = document.getElementById('vol-main');
+    function bindVol(el, get, set, key, live) {
+      if (!el) return;
+      const out = el.parentElement.querySelector('output');
+      const show = () => { if (out) out.textContent = Math.round(get() * 100) + '%'; };
+      el.value = String(Math.round(get() * 100));
+      show();
+      el.addEventListener('input', () => {
+        set(clamp01(Number(el.value) / 100));
+        show();
+        live();
+      });
+      el.addEventListener('change', () => {
+        try { localStorage.setItem(key, String(get())); } catch (e) { /* 保存できない環境 */ }
+      });
+    }
+    bindVol(volOp, () => opVol, (v) => { opVol = v; }, VKEY_OP, () => {
+      // 鳴っているのは、オープニング曲か、試し聴き (入場後のオープニング曲は消えているので触らない)
+      if (prev) { if (prev.kind !== 'main') fade(prev.t, opVol, 0.05); }
+      else if (opTrack && !opTrack.el.paused && musicOn && !(enter && enter.checked)) fade(opTrack, opVol, 0.05);
+    });
+    bindVol(volMain, () => mainVol, (v) => { mainVol = v; }, VKEY_MAIN, () => {
+      const b = bgm();
+      if (prev) { if (prev.kind === 'main') fade(prev.t, mainVol, 0.05); }
+      else if (b && !b.el.paused && musicOn && enter && enter.checked) fade(b, mainVol, 0.05);
+    });
+
+    // ---- 起動 ----
+    syncToggle();
+    syncMotionToggle();
+    markSelected();
+    markMain();
+    syncUnify();
+    if (!perm) { window.__motionReady = applyMotion(); unlock(); return; }
+    const yes = perm.querySelector('[data-perm="yes"]');
+    const no = perm.querySelector('[data-perm="no"]');
+    if (yes) yes.addEventListener('click', () => decide(true));
+    if (no) no.addEventListener('click', () => decide(false));
+    if (yes) yes.focus({ preventScroll: true });
+  } catch (e) {
+    unlock();  // 何かあっても、サイトが見られなくなることはないようにする
+  }
+})();
+</script>
+<script>
+(() => {
+  let cfg = null;
+  try { cfg = JSON.parse(document.getElementById('sound-cfg').textContent); } catch (e) { return; }
+  const src = cfg.cursorSrc || '';
+  const vol = typeof cfg.cursorVolume === 'number' ? Math.min(1, Math.max(0, cfg.cursorVolume)) : 0.5;
+  const KEY = 'osaito-cursor-snd';
+  let on = true;
+  try { if (localStorage.getItem(KEY) === 'off') on = false; } catch (e) { /* 保存できない環境 */ }
+  const tg = document.getElementById('cursor-toggle');
+  const sync = () => {
+    if (!tg) return;
+    tg.setAttribute('aria-pressed', String(on && !!src));
+    tg.textContent = (on && src) ? 'ON' : 'OFF';
+  };
+  sync();
+  if (!src) { if (tg) tg.disabled = true; return; }   // cursol.mp3 が無いときは何もしない
+
+  const POOL = 4, pool = [];
+  let idx = 0, last = 0;
+  for (let i = 0; i < POOL; i++) { const a = new Audio(src); a.preload = 'auto'; a.volume = vol; pool.push(a); }
+  function ping() {
+    const a = pool[idx++ % POOL];   // 素早く動かしても重なって鳴るように、何個か交代で使う
+    try { a.currentTime = 0; const p = a.play(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* 再生できない */ }
+  }
+  if (tg) tg.addEventListener('click', () => {
+    on = !on; sync();
+    try { localStorage.setItem(KEY, on ? 'on' : 'off'); } catch (e) { /* 保存できない環境 */ }
+    if (on) ping();
+  });
+
+  const SEL = '.list a,.song,.pv,.back,.vback,.subtabs button,.tabs label,.tgl';
+  const enter = document.getElementById('enter');
+  document.addEventListener('pointerover', (e) => {
+    if (!on || e.pointerType !== 'mouse') return;
+    if (enter && !enter.checked) return;   // 入場前は鳴らさない
+    const t = e.target && e.target.closest ? e.target.closest(SEL) : null;
+    if (!t || t.disabled) return;
+    if (e.relatedTarget && t.contains(e.relatedTarget)) return;   // ボタンの中で動いただけなら鳴らさない
+    const now = performance.now();
+    if (now - last < 50) return;
+    last = now;
+    ping();
+  }, { passive: true });
+})();
+</script>
+<script type="application/json" id="visits-cfg">{"enabled": true, "namespace": "xdnet311491-xdnet311491-github-io", "key": "visitors", "hit_url": "https://abacus.jasoncameron.dev/hit/{ns}/{key}", "get_url": "https://abacus.jasoncameron.dev/get/{ns}/{key}", "offset": 1030}</script>
+<script>
+(() => {
+  let cfg = null;
+  try { cfg = JSON.parse(document.getElementById('visits-cfg').textContent); } catch (e) { return; }
+  const box = document.getElementById('visits'), num = document.getElementById('visits-n');
+  if (!cfg || !cfg.enabled || !box || !num) return;
+  const KEY = 'osaito-counted';
+  let counted = false;
+  try { counted = localStorage.getItem(KEY) === '1'; } catch (e) { /* 保存できない環境 */ }
+  const fill = (u) => String(u).replace('{ns}', encodeURIComponent(cfg.namespace)).replace('{key}', encodeURIComponent(cfg.key));
+  fetch(fill(counted ? cfg.get_url : cfg.hit_url), { cache: 'no-store' })
+    .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then((j) => {
+      const v = typeof j.value === 'number' ? j.value : j.count;
+      if (typeof v !== 'number') throw new Error('bad');
+      num.textContent = (v + (Number(cfg.offset) || 0)).toLocaleString('ja-JP');
+      box.hidden = false;
+      if (!counted) { try { localStorage.setItem(KEY, '1'); } catch (e) { /* 保存できない環境 */ } }
+    })
+    .catch(() => { num.textContent = '—'; box.hidden = false; });   // 数えられなかったときも、サイトは普通に使える
+})();
+</script>
+<script>
+(function () {
+  // スマホの長押しで出る「新しいタブで開く / リンクをコピー」などのメニューを、操作ボタンでは出さない。
+  // 説明文の中のリンクや、入力欄では今までどおり出る。PC の右クリックも変えない。
+  if (!window.matchMedia || !matchMedia('(hover:none) and (pointer:coarse)').matches) return;
+  const SEL = '.list a,.tabs label,.back,.vback,.subtabs button,.song,.pv,.sw,.tgl,a[href="#"],main button,.wall,.op-video,.op-still';
+  document.addEventListener('contextmenu', (e) => {
+    const t = e.target;
+    if (!t || !t.closest) return;
+    if (t.closest('input,textarea,select,[contenteditable="true"]')) return;
+    if (t.closest(SEL)) e.preventDefault();
+  }, true);
+})();
+</script>
+<script type="application/json" id="dev-cfg">{"salt": "osaito-dev-v1", "iter": 200000, "hash": "d32b21e3277727d992c63fff77eb5c7edab723bc3b8c614700288219862c8396"}</script>
+<script>
+(() => {
+  const lock = document.getElementById('dev-lock'), body = document.getElementById('dev-body');
+  if (!lock || !body) return;
+  const meta = document.querySelector('meta[name="build-id"]');
+  const bid = document.getElementById('dev-build');
+  if (bid && meta) bid.textContent = meta.content;
+
+  const cfgEl = document.getElementById('dev-cfg');
+  let cfg = null;
+  try { cfg = JSON.parse(cfgEl.textContent); } catch (e) { /* パスワード未設定 */ }
+  const pw = document.getElementById('dev-pw'), go = document.getElementById('dev-go');
+  const msg = document.getElementById('dev-msg'), msg2 = document.getElementById('dev-msg2');
+  if (!cfg || !pw || !go) return;   // 未設定のときは、ずっとロックのまま
+  const SKEY = 'osaito-dev-ok';
+  const open = (on) => { lock.hidden = on; body.hidden = !on; };
+
+  // このタブを開いている間だけ、開いたままにする (パスワードを変えたら、またロックされる)
+  try { if (sessionStorage.getItem(SKEY) === cfg.hash) open(true); } catch (e) { /* 保存できない環境 */ }
+
+  const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  async function derive(p) {
+    const enc = new TextEncoder();
+    const k = await crypto.subtle.importKey('raw', enc.encode(p), 'PBKDF2', false, ['deriveBits']);
+    return hex(await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', salt: enc.encode(cfg.salt), iterations: cfg.iter, hash: 'SHA-256' }, k, 256));
+  }
+  let busy = false, fails = 0;
+  async function tryIn() {
+    if (busy) return;
+    if (!pw.value) { msg.textContent = 'パスワードを入力してください。'; return; }
+    if (!(window.crypto && crypto.subtle)) { msg.textContent = 'この環境では使えません (https で開いてください)。'; return; }
+    busy = true; msg.textContent = '確認しています…';
+    try {
+      const h = await derive(pw.value);
+      if (h === cfg.hash) {
+        pw.value = ''; msg.textContent = ''; fails = 0;
+        try { sessionStorage.setItem(SKEY, cfg.hash); } catch (e) { /* 保存できない環境 */ }
+        open(true);
+      } else {
+        fails++;
+        await new Promise((r) => setTimeout(r, Math.min(3000, 500 * fails)));   // 連打して試せないように、少し待たせる
+        msg.textContent = 'パスワードが違います。';
+      }
+    } catch (e) { msg.textContent = '確認できませんでした。'; }
+    busy = false;
+  }
+  go.addEventListener('click', tryIn);
+  pw.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); tryIn(); } });
+
+  const on = (id, fn) => { const el = document.getElementById(id); if (el) el.addEventListener('click', fn); };
+  on('dev-relock', () => { try { sessionStorage.removeItem(SKEY); } catch (e) { /* ok */ } if (msg2) msg2.textContent = ''; open(false); });
+  on('dev-recount', () => {
+    try { localStorage.removeItem('osaito-counted'); } catch (e) { /* ok */ }
+    if (msg2) msg2.textContent = '「カウント済み」を解除しました。ページを読み込み直すと、もう一度数えられます。';
+  });
+  on('dev-reset', () => {
+    if (!window.confirm('この端末に保存した設定 (曲・壁紙・透明度・音量など) をすべて消します。よろしいですか?')) return;
+    try {
+      Object.keys(localStorage).filter((k) => k.indexOf('osaito-') === 0).forEach((k) => localStorage.removeItem(k));
+    } catch (e) { /* ok */ }
+    if (msg2) msg2.textContent = '消しました。ページを読み込み直してください。';
+  });
+})();
+</script>
+<script type="application/json" id="env-data">{"status": "ok", "iter": 200000, "salt": "osaito-env-v1", "items": [{"n": "url", "f": [["url", "URL", "<https://aistudio.google.com/api-keys>"]]}, {"n": "key", "f": [["secret", "key", "fdca1c34ed2e0d2ac7553f566365fb2eba5c1e44d25f9872b8d380e3caccf6962356c5b40d56fcf56809055d03e9af13dd6511b95b2c428384bc3b5d2e5da821be8874f1fadf13def0f46267cd8e86477bc229907c3b95563d6f9fd42cb83995f781cffcbe"]]}, {"n": "tag", "f": [["tag", "タグ", "AI, 無料枠"]]}, {"n": "limit", "f": [["text", "制限・料金", "無料枠あり(回数制限あり)"]]}, {"n": "expires", "f": [["text", "期限", "2027-3-31"]]}, {"n": "memo", "f": [["memo", "メモ", "使うのはあまりお勧めしない"]]}, {"n": "url", "f": [["url", "URL", "<https://openrouter.ai/workspaces/default/keys>"]]}, {"n": "key", "f": [["secret", "key", "e3927b1acc6ab51d00291e644cfe4e62c8fb8387bec8b508106f9914fefe0470cb79f6a784f75a2a1c0d92440c2ac3b92d39a805edd8dab05934255c96ab491591c4501815be65b1606c8da49f3035969ec0135f3608278148baf53efd93bb60384d0e885d1acfce3a34278bec2dd7fab51336768dae516768"]]}, {"n": "tag", "f": [["tag", "タグ", "AI,多分無料枠"]]}, {"n": "limit", "f": [["text", "制限・料金", "多分無料"]]}, {"n": "expires", "f": [["text", "期限", "all"]]}, {"n": "memo", "f": [["memo", "メモ", "一番上のがおすすめ"]]}, {"n": "url", "f": [["url", "URL", "<https://console.groq.com/keys>"]]}, {"n": "key", "f": [["secret", "key", "030e9c0ac6132d7ba444354174efdc8a3c3362176a77b4969552d5db8fa7e7a56e6b1622d962605d934e1c5a839fa98dd25927cc6994acf60e6632f034bb769d745e0f8b92f7cbe10e447f45f169529264fc7b12c90d24db83244725e81ba37e44246fea1ca720c4"]]}, {"n": "tag", "f": [["tag", "タグ", "AI,無料枠"]]}, {"n": "limit", "f": [["text", "制限・料金", "無料"]]}, {"n": "expires", "f": [["text", "期限", "all"]]}, {"n": "memo", "f": [["memo", "メモ", "鯖主愛用"]]}], "has_secret": true}</script>
+<script>
+(() => {
+  const box = document.getElementById('env-box'), el = document.getElementById('env-data');
+  if (!box || !el) return;
+  let data = null;
+  try { data = JSON.parse(el.textContent); } catch (e) { /* 読めない */ }
+  const mk = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+  const head = mk('h3', null, 'API一覧');
+  const note = (t, cls) => { box.replaceChildren(head, mk('p', 'env-note' + (cls ? ' ' + cls : ''), t)); };
+  if (!data || data.status === 'nofile') return note('env.txt がありません。作ると、ここに一覧が出ます (書き方は env.example.txt)。');
+  if (data.status === 'nopw') return note('dev_password.txt が無いので、API一覧は出していません。');
+  if (data.status === 'empty') return note('env.txt に項目が1件もありません。');
+  if (data.status !== 'ok') return note('読み込めませんでした。');
+
+  let plain = null;            // 解除したあとの {"項目番号:欄番号": 文字}
+  const shown = new Set();     // 「表示」中の欄
+  let query = '';
+  const hex2b = (h) => Uint8Array.from(h.match(/../g) || [], (x) => parseInt(x, 16));
+  const cat = (a, b) => { const o = new Uint8Array(a.length + b.length); o.set(a); o.set(b, a.length); return o; };
+
+  async function unlock(pw) {
+    const enc = new TextEncoder();
+    const base = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
+    const bits = new Uint8Array(await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', salt: enc.encode(data.salt), iterations: data.iter, hash: 'SHA-256' }, base, 512));
+    const hm = { name: 'HMAC', hash: 'SHA-256' };
+    const encKey = await crypto.subtle.importKey('raw', bits.slice(0, 32), hm, false, ['sign']);
+    const macKey = await crypto.subtle.importKey('raw', bits.slice(32), hm, false, ['sign']);
+    const out = {};
+    for (let i = 0; i < data.items.length; i++) {
+      const f = data.items[i].f;
+      for (let j = 0; j < f.length; j++) {
+        if (f[j][0] !== 'secret') continue;
+        const b = hex2b(f[j][2]), nonce = b.slice(0, 16), tag = b.slice(b.length - 32), ct = b.slice(16, b.length - 32);
+        const mac = new Uint8Array(await crypto.subtle.sign('HMAC', macKey, cat(nonce, ct)));
+        let bad = mac.length !== tag.length;
+        for (let k = 0; k < tag.length; k++) bad = bad || mac[k] !== tag[k];
+        if (bad) throw new Error('bad');
+        const pt = new Uint8Array(ct.length);
+        for (let blk = 0; blk * 32 < ct.length; blk++) {
+          const ctr = new Uint8Array(4); new DataView(ctr.buffer).setUint32(0, blk);
+          const ks = new Uint8Array(await crypto.subtle.sign('HMAC', encKey, cat(nonce, ctr)));
+          for (let k = 0; k < 32 && blk * 32 + k < ct.length; k++) pt[blk * 32 + k] = ct[blk * 32 + k] ^ ks[k];
+        }
+        out[i + ':' + j] = new TextDecoder().decode(pt);
+      }
+    }
+    return out;
+  }
+
+  async function copy(t, btn) {
+    try { await navigator.clipboard.writeText(t); }
+    catch (e) { const ta = mk('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e2) { /* ok */ } ta.remove(); }
+    const old = btn.textContent; btn.textContent = 'コピー済'; setTimeout(() => { btn.textContent = old; }, 1200);
+  }
+  const safeHref = (u) => /^https?:\/\//i.test(u) ? u : null;
+
+  function card(it, i) {
+    const c = mk('div', 'env-card'), nm = mk('div', 'env-name', it.n);
+    it.f.filter((f) => f[0] === 'tag').forEach((f) => f[2].split(/[,、，]/).map((x) => x.trim()).filter(Boolean)
+      .forEach((t) => nm.appendChild(mk('span', 'env-tag', t))));
+    c.appendChild(nm);
+    it.f.forEach((f, j) => {
+      const [kind, label, val] = f;
+      if (kind === 'tag') return;
+      const row = mk('div', 'env-f'), v = mk('div', 'env-v plain'), b = mk('div', 'env-b');
+      row.appendChild(mk('div', 'env-l', label)); row.appendChild(v); row.appendChild(b);
+      if (kind === 'secret') {
+        const id = i + ':' + j; v.className = 'env-v';
+        if (!plain) { v.classList.add('mask'); v.textContent = '🔒 ロック中'; }
+        else if (shown.has(id)) { v.textContent = plain[id]; }
+        else { v.classList.add('mask'); v.textContent = '••••••••'; }
+        if (plain) {
+          const t = mk('button', null, shown.has(id) ? '隠す' : '表示'); t.type = 'button';
+          t.onclick = () => { shown.has(id) ? shown.delete(id) : shown.add(id); render(); };
+          const cp = mk('button', null, 'コピー'); cp.type = 'button'; cp.onclick = () => copy(plain[id], cp);
+          b.appendChild(t); b.appendChild(cp);
+        }
+      } else {
+        const href = (kind === 'url' || kind === 'link') ? safeHref(val) : null;
+        if (href && kind === 'link') { const a = mk('a', null, val); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.style.color = 'var(--glow)'; v.appendChild(a); }
+        else v.textContent = val;
+        if (kind === 'url' || kind === 'link') { v.className = 'env-v'; }
+        if (kind === 'url' || kind === 'link') { const cp = mk('button', null, 'コピー'); cp.type = 'button'; cp.onclick = () => copy(val, cp); b.appendChild(cp); }
+      }
+      c.appendChild(row);
+    });
+    return c;
+  }
+
+  function render() {
+    const bar = mk('div', 'env-bar'), q = mk('input'); q.type = 'search'; q.placeholder = '検索 (名前・メモ・タグ)'; q.value = query;
+    q.setAttribute('aria-label', 'API一覧を検索'); q.autocomplete = 'off';
+    q.oninput = () => { query = q.value; renderList(); };
+    bar.appendChild(q);
+    const msg = mk('p', 'env-note', '');
+    if (data.has_secret) {
+      if (!plain) {
+        const pw = mk('input'); pw.type = 'password'; pw.placeholder = 'パスワードでキーを解除'; pw.autocomplete = 'off'; pw.setAttribute('aria-label', 'キーを解除するパスワード');
+        const go = mk('button', null, '解除'); go.type = 'button';
+        const run = async () => {
+          if (!pw.value) return;
+          if (!(window.crypto && crypto.subtle)) { msg.textContent = 'この環境では解除できません (https で開いてください)。'; return; }
+          msg.className = 'env-note'; msg.textContent = '確認しています…';
+          try { plain = await unlock(pw.value); pw.value = ''; shown.clear(); render(); }
+          catch (e) { msg.className = 'env-note env-err'; msg.textContent = 'パスワードが違います。'; }
+        };
+        go.onclick = run; pw.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); run(); } };
+        bar.appendChild(pw); bar.appendChild(go);
+      } else {
+        const lk = mk('button', null, 'キーをロック'); lk.type = 'button'; lk.onclick = () => { plain = null; shown.clear(); render(); };
+        bar.appendChild(lk);
+      }
+    }
+    const list = mk('div'); list.id = 'env-list';
+    box.replaceChildren(head, bar, msg, list);
+    renderList();
+  }
+  function renderList() {
+    const list = document.getElementById('env-list'); if (!list) return;
+    const q = query.trim().toLowerCase(); let n = 0;
+    list.replaceChildren();
+    data.items.forEach((it, i) => {
+      const hay = (it.n + ' ' + it.f.filter((f) => f[0] !== 'secret').map((f) => f[1] + ' ' + f[2]).join(' ')).toLowerCase();
+      if (q && hay.indexOf(q) < 0) return;
+      n++; list.appendChild(card(it, i));
+    });
+    if (!n) list.appendChild(mk('p', 'env-note', '見つかりませんでした。'));
+  }
+  const rl = document.getElementById('dev-relock');
+  if (rl) rl.addEventListener('click', () => { plain = null; shown.clear(); render(); });
+  render();
+})();
+</script>
+<script>
+(() => {
+  const reveal = (e) => {
+    const s = e.target.closest && e.target.closest('.dm-sp');
+    if (s && !s.classList.contains('on')) { e.preventDefault(); e.stopPropagation(); s.classList.add('on'); return true; }
+    return false;
+  };
+  document.addEventListener('click', reveal, true);
+  document.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && reveal(e)) return;
+  }, true);
+
+  const L = 'ja-JP';
+  const FMT = {
+    t: { hour: '2-digit', minute: '2-digit' },
+    T: { hour: '2-digit', minute: '2-digit', second: '2-digit' },
+    d: { year: 'numeric', month: '2-digit', day: '2-digit' },
+    D: { year: 'numeric', month: 'long', day: 'numeric' },
+    f: { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' },
+    F: { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long', hour: '2-digit', minute: '2-digit' },
+  };
+  const rel = (d) => {
+    const sec = Math.round((d.getTime() - Date.now()) / 1000), a = Math.abs(sec);
+    const r = new Intl.RelativeTimeFormat(L, { numeric: 'auto' });
+    if (a < 60) return r.format(sec, 'second');
+    if (a < 3600) return r.format(Math.round(sec / 60), 'minute');
+    if (a < 86400) return r.format(Math.round(sec / 3600), 'hour');
+    if (a < 2592000) return r.format(Math.round(sec / 86400), 'day');
+    if (a < 31536000) return r.format(Math.round(sec / 2592000), 'month');
+    return r.format(Math.round(sec / 31536000), 'year');
+  };
+  const els = [...document.querySelectorAll('.dm-ts')];
+  const paint = () => {
+    els.forEach((el) => {
+      try {
+        const d = new Date(parseInt(el.dataset.ts, 10) * 1000), st = el.dataset.st || 'f';
+        if (isNaN(d.getTime())) return;
+        el.title = d.toLocaleString(L, FMT.F);
+        el.textContent = st === 'R' ? rel(d) : d.toLocaleString(L, FMT[st] || FMT.f);
+      } catch (e) { /* 表示できない環境 */ }
+    });
+  };
+  if (els.length) { paint(); if (els.some((e) => e.dataset.st === 'R')) setInterval(paint, 30000); }
+})();
+</script>
+<script>
+(() => {
+  const sec = document.querySelector('.p-fukyou');
+  if (!sec) return;
+  const show = (id) => {
+    const v = document.getElementById(id);
+    if (!v) return;
+    sec.querySelectorAll('.fk-view').forEach((x) => { x.hidden = (x !== v); });
+    sec.scrollTop = 0;
+  };
+  // カード・戻るボタンの data-go に書いた id の画面へ切り替える
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest ? e.target : e.target.parentElement;
+    const b = t && t.closest('.p-fukyou [data-go]');
+    if (!b) return;
+    e.preventDefault();
+    e.stopPropagation();   // 「戻る」を、お遊びコーナーの戻る処理に渡さない
+    show(b.dataset.go);
+  }, true);
+})();
+</script>
+<script>
+(() => {
+  const bar = document.querySelector('.tabs');
+  if (!bar) return;
+  bar.addEventListener('wheel', (e) => {
+    if (bar.scrollWidth <= bar.clientWidth) return;
+    const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (!d) return;
+    e.preventDefault();
+    bar.scrollLeft += d;
+  }, { passive: false });
+  let down = false, moved = false, sx = 0, sl = 0;
+  bar.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
+    down = true; moved = false; sx = e.clientX; sl = bar.scrollLeft;
+  });
+  window.addEventListener('pointermove', (e) => {
+    if (!down) return;
+    const dx = e.clientX - sx;
+    if (!moved && Math.abs(dx) > 5) { moved = true; bar.classList.add('dragging'); }
+    if (moved) bar.scrollLeft = sl - dx;
+  });
+  window.addEventListener('pointerup', () => { down = false; bar.classList.remove('dragging'); });
+  bar.addEventListener('click', (e) => {   // ドラッグしたあとのクリックで、タブが切り替わらないように
+    if (moved) { e.preventDefault(); e.stopPropagation(); moved = false; }
+  }, true);
+  document.addEventListener('change', (e) => {
+    if (!e.target || e.target.name !== 'tab') return;
+    const l = bar.querySelector('label[for="' + e.target.id + '"]');
+    if (l) l.scrollIntoView({ inline: 'nearest', block: 'nearest', behavior: 'smooth' });
+  });
+})();
+</script>
+</body>
+</html>

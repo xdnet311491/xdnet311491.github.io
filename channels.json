@@ -1,0 +1,27 @@
+[
+  {
+    "name": "YouTubeチャンネル",
+    "description": "オデ🤓は面白い😤😤😤",
+    "url": "https://www.youtube.com/@8111F_NodaLine"
+  },
+  {
+    "name": "X",
+    "description": "自慢とかくだらないお話",
+    "url": "https://x.com/@rapid313_nagoya"
+  },
+  {
+    "name": "DiscordBot",
+    "description": "あかふゆの技術力は世界一(要審議)",
+    "url": "https://discord.com/oauth2/authorize?client_id=1341385377813889054&permissions=8&integration_type=0&scope=bot+applications.commands"
+  },
+  {
+    "name": "Roblox",
+    "description": "ガキのお遊びだけどガキなので",
+    "url": "https://www.roblox.com/ja/users/4991709658/profile"
+  },
+  {
+    "name": "guns.lol",
+    "description": "LOL",
+    "url": "http://guns.lol/xdnet_311491"
+  }
+]
