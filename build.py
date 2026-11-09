@@ -209,7 +209,6 @@ VISITOR_COUNTER_DEFAULT = {
     "key": "visitors",
     "hit_url": "https://abacus.jasoncameron.dev/hit/{ns}/{key}",
     "get_url": "https://abacus.jasoncameron.dev/get/{ns}/{key}",
-    "offset": 0,   # 表示する数に足す数 (例: 1030 にすると、本当の数が1のとき 1,031 と表示される)
 }
 
 
@@ -1940,20 +1939,7 @@ def _fk_img(name: str, missing: list):
     return "siryou/" + quote(name)
 
 
-_FK_POS = re.compile(r"^\d+(?:\.\d+)?\s*[%％]\s*[,，、]?\s*\d+(?:\.\d+)?\s*[%％]$")
-
-
-def _fk_pos(fields):
-    """行の4番目以降から「50％ 65％」(左がx・右がy) の形のものを探して "50% 65%" にする。無ければ ""。
-    見つけた欄は空にする (詳細ページ用の画像ファイル名と取り違えないため)"""
-    import unicodedata
-    for i in range(3, len(fields)):
-        t = unicodedata.normalize("NFKC", fields[i]).strip()
-        if _FK_POS.match(t):
-            fields[i] = ""
-            x, y = re.findall(r"\d+(?:\.\d+)?", t)
-            return f"{min(100, float(x)):g}% {min(100, float(y)):g}%"
-    return ""
+_FK_POS = re.compile(r"^(\d+(?:\.\d+)?)\s*[%％]\s*[,、]?\s*(\d+(?:\.\d+)?)\s*[%％]$")
 
 
 def _fk_rooms():
@@ -1976,9 +1962,16 @@ def _fk_rooms():
             if target is not None:
                 target.append(line)
             continue
-        f = [x.strip() for x in re.split(r"[|｜]", m.group(2))] + ["", "", "", ""]
+        f = [x.strip() for x in re.split(r"[|｜]", m.group(2))]
+        pos = ""   # 画像の切り抜き位置 「50％ 65％」(左=x軸 右=y軸)。4番目以降のどこに書いてもOK
+        for k in range(3, len(f)):
+            pm = _FK_POS.match(f[k])
+            if pm:
+                pos = f"{pm.group(1)}% {pm.group(2)}%"
+                del f[k]
+                break
+        f += ["", "", "", ""]
         name = f[0] or "(名前なし)"
-        pos = _fk_pos(f)
         if m.group(1) == "部屋":
             room = {"name": name, "img": _fk_img(f[1], missing), "desc": f[2], "pos": pos, "lines": [], "items": []}
             rooms.append(room)
@@ -2052,7 +2045,7 @@ FUKYOU_CSS = """
 @keyframes fk-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 .fk-view .vbar{margin-bottom:1rem}
 .fk-intro{margin:0 0 1rem;color:var(--dim)}
-.fk-card{position:relative;overflow:hidden;isolation:isolate}
+.fk-card{position:relative;overflow:hidden;isolation:isolate;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 .fk-card .name,.fk-card .desc{position:relative;z-index:1}
 .fk-card.has-img::before{content:'';position:absolute;inset:0;z-index:0;opacity:0;transition:opacity 1.1s ease;
   background:linear-gradient(to right,rgba(10,14,42,.9) 0%,rgba(10,14,42,.4) 55%,rgba(10,14,42,.05) 100%),
@@ -2077,6 +2070,10 @@ FUKYOU_JS = r"""
     sec.querySelectorAll('.fk-view').forEach((x) => { x.hidden = (x !== v); });
     sec.scrollTop = 0;
   };
+  // スマホで長押ししたときの「新しいタブで開く…」のメニューを出さない (布教部屋の中だけ)
+  sec.addEventListener('contextmenu', (e) => {
+    if (e.target && e.target.closest && e.target.closest('a, button, .fk-card')) e.preventDefault();
+  });
   // カード・戻るボタンの data-go に書いた id の画面へ切り替える
   document.addEventListener('click', (e) => {
     const t = e.target.closest ? e.target : e.target.parentElement;
@@ -2091,11 +2088,11 @@ FUKYOU_JS = r"""
 
 
 def _fk_card(go: str, name: str, desc: str, img, pos: str = "") -> str:
-    p = f";--pos:{pos}" if pos else ""
+    p = f";--pos:{html.escape(pos, quote=True)}" if (img and pos) else ""
     st = f' style="--img:url({html.escape(img, quote=True)}){p}"' if img else ""
     cls = "fk-card has-img" if img else "fk-card"
     d = f'<span class="desc">{html.escape(desc)}</span>' if desc else ""
-    return (f'<li><a href="#" class="{cls}" data-go="{go}"{st}>'
+    return (f'<li><a href="#" class="{cls}" data-go="{go}" draggable="false"{st}>'
             f'<span class="name">{html.escape(name)}</span>{d}</a></li>')
 
 
@@ -2168,27 +2165,11 @@ VISITS_JS = r"""
     .then((j) => {
       const v = typeof j.value === 'number' ? j.value : j.count;
       if (typeof v !== 'number') throw new Error('bad');
-      num.textContent = (v + (Number(cfg.offset) || 0)).toLocaleString('ja-JP');
+      num.textContent = v.toLocaleString('ja-JP');
       box.hidden = false;
       if (!counted) { try { localStorage.setItem(KEY, '1'); } catch (e) { /* 保存できない環境 */ } }
     })
     .catch(() => { num.textContent = '—'; box.hidden = false; });   // 数えられなかったときも、サイトは普通に使える
-})();
-"""
-
-
-NOMENU_JS = r"""
-(function () {
-  // スマホの長押しで出る「新しいタブで開く / リンクをコピー」などのメニューを、操作ボタンでは出さない。
-  // 説明文の中のリンクや、入力欄では今までどおり出る。PC の右クリックも変えない。
-  if (!window.matchMedia || !matchMedia('(hover:none) and (pointer:coarse)').matches) return;
-  const SEL = '.list a,.tabs label,.back,.vback,.subtabs button,.song,.pv,.sw,.tgl,a[href="#"],main button,.wall,.op-video,.op-still';
-  document.addEventListener('contextmenu', (e) => {
-    const t = e.target;
-    if (!t || !t.closest) return;
-    if (t.closest('input,textarea,select,[contenteditable="true"]')) return;
-    if (t.closest(SEL)) e.preventDefault();
-  }, true);
 })();
 """
 
@@ -2202,7 +2183,7 @@ def visits_html() -> str:
 def visits_tag() -> str:
     if not VISITOR_COUNTER.get("enabled"):
         return ""
-    cfg = {k: VISITOR_COUNTER.get(k) for k in ("enabled", "namespace", "key", "hit_url", "get_url", "offset")}
+    cfg = {k: VISITOR_COUNTER.get(k) for k in ("enabled", "namespace", "key", "hit_url", "get_url")}
     j = json.dumps(cfg, ensure_ascii=False).replace("</", "<\\/")
     return f'<script type="application/json" id="visits-cfg">{j}</script>\n<script>{VISITS_JS}</script>'
 
@@ -2330,8 +2311,7 @@ def dev_panel_html() -> str:
         '<button type="button" class="tgl" id="dev-reset">消す</button></div>'
         '<div class="sw"><span class="sw-t">ロックする</span>'
         '<button type="button" class="tgl" id="dev-relock">ロック</button></div>'
-        '<p class="s-msg" id="dev-msg2" role="status"></p>'
-        '<div class="env-box" id="env-box"></div></div>'
+        '<p class="s-msg" id="dev-msg2" role="status"></p></div>'
         '</section>'
     )
 
@@ -2341,325 +2321,17 @@ def dev_tag() -> str:
     j = json.dumps(c, ensure_ascii=False) if c else "null"
     return f'<script type="application/json" id="dev-cfg">{j}</script>\n<script>{DEV_JS}</script>'
 
-# ---------- 開発者機能: API一覧 (env.txt) ----------
-# env.txt を読んで、開発者機能の中に「API一覧」を出す。書き方は env.example.txt を見ること。
-#  ・env.txt は .gitignore に入る = GitHubには上がらない。
-#  ・ただし、ページ (index.html) には内容が入る。「キー・トークン・パスワード・秘密」を含む名前の項目は、
-#    dev_password.txt のパスワードから作った鍵で暗号化して入れる (パスワードを入れて「解除」するまで読めない)。
-#    それ以外の項目 (URL・メモなど) は、ページのソースを見れば誰でも読めるので、秘密は書かないこと。
-ENV_FILE = BASE / "env.txt"
-ENV_ITER = 200000
-ENV_SALT = "osaito-env-v1"
-
-# 項目名 → (種類, 表示名)。ここに無い名前は、そのまま「文字」として出す
-_ENV_ALIASES = {}
-for _names, _kind, _label in (
-    (("url", "endpoint", "base_url", "base", "エンドポイント", "アドレス"), "url", "URL"),
-    (("link", "リンク", "管理画面", "console", "dashboard", "ダッシュボード", "docs", "ドキュメント", "取得先"), "link", None),
-    (("limit", "制限", "無料枠", "料金", "plan", "プラン", "quota", "上限"), "text", "制限・料金"),
-    (("memo", "メモ", "note", "備考"), "memo", "メモ"),
-    (("tag", "タグ"), "tag", "タグ"),
-    (("expires", "期限", "有効期限"), "text", "期限"),
-):
-    for _n in _names:
-        _ENV_ALIASES[_n] = (_kind, _label)
-_ENV_SECRET_WORDS = ("key", "キー", "token", "トークン", "secret", "シークレット", "password", "パスワード", "秘密")
-_ENV_FIELD = re.compile(r"^([^\s:：=][^:：=]*?)\s*[:：=]\s*(.*)$")
-
-
-def _env_unquote(v: str) -> str:
-    v = v.strip()
-    if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'":
-        return v[1:-1]
-    return v
-
-
-def parse_env(text: str):
-    """env.txt の中身 → ([(名前, [(種類, 表示名, 値), ...]), ...], 警告のリスト)"""
-    items, warns = [], []
-    cur = None          # いまの項目: [名前, [[名前, 値], ...]]
-    blanks = 0
-    for no, raw in enumerate(text.replace("\r\n", "\n").replace("\r", "\n").split("\n"), 1):
-        line = raw.rstrip()
-        if raw.startswith("#") or raw.startswith("＃"):
-            continue
-        if not line.strip():
-            blanks += 1
-            continue
-        if line[0] in "@＠":
-            cur = [line[1:].strip() or "(名前なし)", []]
-            items.append(cur)
-            blanks = 0
-            continue
-        if line[0] in " \t　":                     # 字下げ = 前の項目の続き (複数行のメモ)
-            if cur and cur[1]:
-                cur[1][-1][1] += "\n" * (blanks + 1) + line.strip()
-            else:
-                warns.append(f"{no}行目: 続きの行ですが、前に項目がありません")
-            blanks = 0
-            continue
-        m = _ENV_FIELD.match(line)
-        if not m:
-            warns.append(f"{no}行目: 「項目名: 値」の形ではないので読み飛ばしました")
-            blanks = 0
-            continue
-        name, val = m.group(1).strip(), _env_unquote(m.group(2))
-        blanks = 0
-        if cur is None:
-            if re.fullmatch(r"[A-Za-z0-9_]+", name):   # @ なしの「NAME=値」は、その名前の項目として扱う
-                cur = [name, []]
-                items.append(cur)
-                cur[1].append([name, val])
-                cur = None
-            else:
-                warns.append(f"{no}行目: 先に「@名前」の行が必要です")
-            continue
-        cur[1].append([name, val])
-    out = []
-    for iname, fields in items:
-        fl = []
-        for fname, fval in fields:
-            low = fname.lower().replace(" ", "")
-            kind, label = _ENV_ALIASES.get(low, (None, None))
-            if kind is None:
-                if any(w in low for w in _ENV_SECRET_WORDS):
-                    kind, label = "secret", fname
-                else:
-                    kind, label = "text", fname
-            if kind == "link" and not label:
-                label = "リンク" if low in ("link", "リンク") else fname
-            if kind in ("url", "link") or label is None:
-                label = label or fname
-            fl.append((kind, label, fval))
-        out.append((iname, fl))
-    return out, warns
-
-
-def _env_encrypt(plain: str, enc_key: bytes, mac_key: bytes) -> str:
-    """HMAC-SHA256 をカウンターで回して作った流れ (CTR) と XOR → HMAC を付ける。標準ライブラリだけで動く。
-    nonce は「鍵+平文」から決めるので、同じ内容なら同じ結果 (index.html が無駄に変わらない)。"""
-    import hmac, struct
-    pt = plain.encode("utf-8")
-    nonce = hmac.new(mac_key, b"nonce" + pt, hashlib.sha256).digest()[:16]
-    ks = b"".join(hmac.new(enc_key, nonce + struct.pack(">I", i), hashlib.sha256).digest()
-                  for i in range((len(pt) + 31) // 32))
-    ct = bytes(a ^ b for a, b in zip(pt, ks))
-    tag = hmac.new(mac_key, nonce + ct, hashlib.sha256).digest()
-    return (nonce + ct + tag).hex()
-
-
-def env_payload():
-    """ページに入れるデータ (dict) と、build 時に表示する説明文を返す"""
-    if not ENV_FILE.is_file():
-        return {"status": "nofile"}, "env.txt: ありません (作ると、開発者機能にAPI一覧が出ます。書き方は env.example.txt)"
-    try:
-        pw = DEV_PASSWORD_FILE.read_text(encoding="utf-8-sig").splitlines()[0].strip()
-    except (OSError, IndexError):
-        pw = ""
-    if not pw:
-        return {"status": "nopw"}, "env.txt: dev_password.txt が無いので、API一覧は出しません (キーを守る鍵に使うため)"
-    items, warns = parse_env(ENV_FILE.read_text(encoding="utf-8-sig"))
-    if not items:
-        return {"status": "empty"}, "env.txt: 項目が1件もありません"
-    km = hashlib.pbkdf2_hmac("sha256", pw.encode("utf-8"), ENV_SALT.encode("utf-8"), ENV_ITER, dklen=64)
-    enc_key, mac_key = km[:32], km[32:]
-    n_sec = 0
-    jitems = []
-    for iname, fields in items:
-        jf = []
-        for kind, label, val in fields:
-            if kind == "secret":
-                n_sec += 1
-                jf.append(["secret", label, _env_encrypt(val, enc_key, mac_key)])
-            else:
-                jf.append([kind, label, val])
-        jitems.append({"n": iname, "f": jf})
-    msg = f"env.txt: {len(items)}件 (うち暗号化した項目 {n_sec}個) を読み込みました"
-    if warns:
-        msg += "\n" + "\n".join("  ⚠ " + w for w in warns[:10])
-    return {"status": "ok", "iter": ENV_ITER, "salt": ENV_SALT, "items": jitems, "has_secret": n_sec > 0}, msg
-
-
-ENV_CSS = """
-.env-box{margin-top:1.2rem;max-width:44rem}
-.env-box h3{margin:0 0 .5rem;font-size:1rem}
-.env-box input,.env-box button{pointer-events:auto}
-.env-bar{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:.4rem 0 .6rem}
-.env-bar input{font:inherit;font-size:.9rem;padding:.4rem .7rem;color:var(--ink);border:1px solid var(--line);
-  border-radius:10px;background:rgba(10,14,42,.85);min-width:0;flex:1 1 9rem}
-.env-bar button,.env-f button{font:inherit;font-size:.8rem;font-weight:700;padding:.25rem .7rem;border-radius:999px;
-  border:1px solid var(--line);background:rgba(20,26,69,.9);color:var(--ink);cursor:pointer}
-.env-card{border:1px solid var(--line);border-radius:12px;padding:.6rem .85rem;margin:.5rem 0;background:rgba(10,14,42,.62)}
-.env-name{font-weight:800;font-size:1rem;margin-bottom:.2rem}
-.env-tag{display:inline-block;font-size:.7rem;font-weight:700;color:var(--glow);border:1px solid var(--line);
-  border-radius:999px;padding:0 .5rem;margin-left:.35rem;vertical-align:.1rem}
-.env-f{display:grid;grid-template-columns:6.5rem 1fr auto;gap:.1rem .6rem;align-items:baseline;font-size:.88rem;padding:.12rem 0}
-.env-l{color:var(--dim);font-size:.8rem}
-.env-v{overflow-wrap:anywhere;white-space:pre-wrap;min-width:0;font-family:ui-monospace,Consolas,monospace;
-  -webkit-user-select:text;user-select:text}
-.env-v.plain{font-family:inherit}
-.env-v.mask{color:var(--dim)}
-.env-b{display:flex;gap:.3rem}
-.env-note{color:var(--dim);font-size:.8rem;margin:.3rem 0}
-.env-err{color:#ffb3bd}
-@media (max-width:480px){.env-f{grid-template-columns:5rem 1fr}.env-b{grid-column:2}}
-"""
-
-ENV_JS = r"""
-(() => {
-  const box = document.getElementById('env-box'), el = document.getElementById('env-data');
-  if (!box || !el) return;
-  let data = null;
-  try { data = JSON.parse(el.textContent); } catch (e) { /* 読めない */ }
-  const mk = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
-  const head = mk('h3', null, 'API一覧');
-  const note = (t, cls) => { box.replaceChildren(head, mk('p', 'env-note' + (cls ? ' ' + cls : ''), t)); };
-  if (!data || data.status === 'nofile') return note('env.txt がありません。作ると、ここに一覧が出ます (書き方は env.example.txt)。');
-  if (data.status === 'nopw') return note('dev_password.txt が無いので、API一覧は出していません。');
-  if (data.status === 'empty') return note('env.txt に項目が1件もありません。');
-  if (data.status !== 'ok') return note('読み込めませんでした。');
-
-  let plain = null;            // 解除したあとの {"項目番号:欄番号": 文字}
-  const shown = new Set();     // 「表示」中の欄
-  let query = '';
-  const hex2b = (h) => Uint8Array.from(h.match(/../g) || [], (x) => parseInt(x, 16));
-  const cat = (a, b) => { const o = new Uint8Array(a.length + b.length); o.set(a); o.set(b, a.length); return o; };
-
-  async function unlock(pw) {
-    const enc = new TextEncoder();
-    const base = await crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveBits']);
-    const bits = new Uint8Array(await crypto.subtle.deriveBits(
-      { name: 'PBKDF2', salt: enc.encode(data.salt), iterations: data.iter, hash: 'SHA-256' }, base, 512));
-    const hm = { name: 'HMAC', hash: 'SHA-256' };
-    const encKey = await crypto.subtle.importKey('raw', bits.slice(0, 32), hm, false, ['sign']);
-    const macKey = await crypto.subtle.importKey('raw', bits.slice(32), hm, false, ['sign']);
-    const out = {};
-    for (let i = 0; i < data.items.length; i++) {
-      const f = data.items[i].f;
-      for (let j = 0; j < f.length; j++) {
-        if (f[j][0] !== 'secret') continue;
-        const b = hex2b(f[j][2]), nonce = b.slice(0, 16), tag = b.slice(b.length - 32), ct = b.slice(16, b.length - 32);
-        const mac = new Uint8Array(await crypto.subtle.sign('HMAC', macKey, cat(nonce, ct)));
-        let bad = mac.length !== tag.length;
-        for (let k = 0; k < tag.length; k++) bad = bad || mac[k] !== tag[k];
-        if (bad) throw new Error('bad');
-        const pt = new Uint8Array(ct.length);
-        for (let blk = 0; blk * 32 < ct.length; blk++) {
-          const ctr = new Uint8Array(4); new DataView(ctr.buffer).setUint32(0, blk);
-          const ks = new Uint8Array(await crypto.subtle.sign('HMAC', encKey, cat(nonce, ctr)));
-          for (let k = 0; k < 32 && blk * 32 + k < ct.length; k++) pt[blk * 32 + k] = ct[blk * 32 + k] ^ ks[k];
-        }
-        out[i + ':' + j] = new TextDecoder().decode(pt);
-      }
-    }
-    return out;
-  }
-
-  async function copy(t, btn) {
-    try { await navigator.clipboard.writeText(t); }
-    catch (e) { const ta = mk('textarea'); ta.value = t; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e2) { /* ok */ } ta.remove(); }
-    const old = btn.textContent; btn.textContent = 'コピー済'; setTimeout(() => { btn.textContent = old; }, 1200);
-  }
-  const safeHref = (u) => /^https?:\/\//i.test(u) ? u : null;
-
-  function card(it, i) {
-    const c = mk('div', 'env-card'), nm = mk('div', 'env-name', it.n);
-    it.f.filter((f) => f[0] === 'tag').forEach((f) => f[2].split(/[,、，]/).map((x) => x.trim()).filter(Boolean)
-      .forEach((t) => nm.appendChild(mk('span', 'env-tag', t))));
-    c.appendChild(nm);
-    it.f.forEach((f, j) => {
-      const [kind, label, val] = f;
-      if (kind === 'tag') return;
-      const row = mk('div', 'env-f'), v = mk('div', 'env-v plain'), b = mk('div', 'env-b');
-      row.appendChild(mk('div', 'env-l', label)); row.appendChild(v); row.appendChild(b);
-      if (kind === 'secret') {
-        const id = i + ':' + j; v.className = 'env-v';
-        if (!plain) { v.classList.add('mask'); v.textContent = '🔒 ロック中'; }
-        else if (shown.has(id)) { v.textContent = plain[id]; }
-        else { v.classList.add('mask'); v.textContent = '••••••••'; }
-        if (plain) {
-          const t = mk('button', null, shown.has(id) ? '隠す' : '表示'); t.type = 'button';
-          t.onclick = () => { shown.has(id) ? shown.delete(id) : shown.add(id); render(); };
-          const cp = mk('button', null, 'コピー'); cp.type = 'button'; cp.onclick = () => copy(plain[id], cp);
-          b.appendChild(t); b.appendChild(cp);
-        }
-      } else {
-        const href = (kind === 'url' || kind === 'link') ? safeHref(val) : null;
-        if (href && kind === 'link') { const a = mk('a', null, val); a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer'; a.style.color = 'var(--glow)'; v.appendChild(a); }
-        else v.textContent = val;
-        if (kind === 'url' || kind === 'link') { v.className = 'env-v'; }
-        if (kind === 'url' || kind === 'link') { const cp = mk('button', null, 'コピー'); cp.type = 'button'; cp.onclick = () => copy(val, cp); b.appendChild(cp); }
-      }
-      c.appendChild(row);
-    });
-    return c;
-  }
-
-  function render() {
-    const bar = mk('div', 'env-bar'), q = mk('input'); q.type = 'search'; q.placeholder = '検索 (名前・メモ・タグ)'; q.value = query;
-    q.setAttribute('aria-label', 'API一覧を検索'); q.autocomplete = 'off';
-    q.oninput = () => { query = q.value; renderList(); };
-    bar.appendChild(q);
-    const msg = mk('p', 'env-note', '');
-    if (data.has_secret) {
-      if (!plain) {
-        const pw = mk('input'); pw.type = 'password'; pw.placeholder = 'パスワードでキーを解除'; pw.autocomplete = 'off'; pw.setAttribute('aria-label', 'キーを解除するパスワード');
-        const go = mk('button', null, '解除'); go.type = 'button';
-        const run = async () => {
-          if (!pw.value) return;
-          if (!(window.crypto && crypto.subtle)) { msg.textContent = 'この環境では解除できません (https で開いてください)。'; return; }
-          msg.className = 'env-note'; msg.textContent = '確認しています…';
-          try { plain = await unlock(pw.value); pw.value = ''; shown.clear(); render(); }
-          catch (e) { msg.className = 'env-note env-err'; msg.textContent = 'パスワードが違います。'; }
-        };
-        go.onclick = run; pw.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); run(); } };
-        bar.appendChild(pw); bar.appendChild(go);
-      } else {
-        const lk = mk('button', null, 'キーをロック'); lk.type = 'button'; lk.onclick = () => { plain = null; shown.clear(); render(); };
-        bar.appendChild(lk);
-      }
-    }
-    const list = mk('div'); list.id = 'env-list';
-    box.replaceChildren(head, bar, msg, list);
-    renderList();
-  }
-  function renderList() {
-    const list = document.getElementById('env-list'); if (!list) return;
-    const q = query.trim().toLowerCase(); let n = 0;
-    list.replaceChildren();
-    data.items.forEach((it, i) => {
-      const hay = (it.n + ' ' + it.f.filter((f) => f[0] !== 'secret').map((f) => f[1] + ' ' + f[2]).join(' ')).toLowerCase();
-      if (q && hay.indexOf(q) < 0) return;
-      n++; list.appendChild(card(it, i));
-    });
-    if (!n) list.appendChild(mk('p', 'env-note', '見つかりませんでした。'));
-  }
-  const rl = document.getElementById('dev-relock');
-  if (rl) rl.addEventListener('click', () => { plain = null; shown.clear(); render(); });
-  render();
-})();
-"""
-
-
-def env_tag() -> str:
-    data, _ = env_payload()
-    j = json.dumps(data, ensure_ascii=False).replace("</", "<\\/").replace("<!--", "<\\!--")
-    return f'<script type="application/json" id="env-data">{j}</script>\n<script>{ENV_JS}</script>'
-
-
 
 def ensure_gitignore() -> None:
-    """dev_password.txt と env.txt が GitHub に上がらないよう、.gitignore に入れておく (改行のしかたは元のファイルに合わせる)"""
+    """dev_password.txt が GitHub に上がらないよう、.gitignore に入れておく (改行のしかたは元のファイルに合わせる)"""
     p = BASE / ".gitignore"
     try:
         raw = p.read_bytes() if p.is_file() else b""
-        nl = b"\r\n" if b"\r\n" in raw else b"\n"
-        have = {x.strip() for x in raw.splitlines()}
-        add = [n for n in (b"dev_password.txt", b"env.txt") if n not in have]
-        if not add:
+        if b"dev_password.txt" in raw:
             return
+        nl = b"\r\n" if b"\r\n" in raw else b"\n"
         lead = b"" if (not raw or raw.endswith(b"\n")) else nl
-        p.write_bytes(raw + lead + nl.join(add) + nl)
+        p.write_bytes(raw + lead + b"dev_password.txt" + nl)
     except OSError:
         pass
 
@@ -2674,7 +2346,6 @@ def report_site() -> None:
         print("開発者機能: パスワードあり (dev_password.txt)")
     else:
         print("開発者機能: パスワード未設定のため入れません。dev_password.txt を作って1行目にパスワードを書くと使えます")
-    print(env_payload()[1])
 
 
 def _rows(items) -> list:
@@ -2972,31 +2643,6 @@ VIEW_JS = r"""
 
 
 # ---------- スマホ・小さい画面向け (PCの見た目はそのまま、狭いときだけ調整する) ----------
-# スマホでも PC と同じレイアウトにするため、スマホには「幅 PC_VIEW_WIDTH px のPC画面」を縮小して見せる。
-#   大きくするほど PC に近い (でも文字は小さくなる)。820 より大きくすること (820以下だとスマホ用の調整が働く)
-PC_VIEW_WIDTH = 1000
-
-# viewport の meta だけだとスマホ(Chrome)が縮小せず、画面の左上しか見えないことがあったので、
-# 画面幅から「ちょうど全体が入る倍率」を計算して明示する。(縦横どちらでも、回したら計算し直す)
-VIEWPORT_JS = r"""
-(function () {
-  var W = __W__, m = document.querySelector('meta[name=viewport]');
-  if (!m || !window.matchMedia || !matchMedia('(pointer:coarse)').matches) return;
-  function fit() {
-    var p = matchMedia('(orientation:portrait)').matches;
-    var w = p ? Math.min(screen.width, screen.height) : Math.max(screen.width, screen.height);
-    if (!w) return;
-    if (w >= W) { m.setAttribute('content', 'width=device-width, initial-scale=1, viewport-fit=cover'); return; }
-    var s = w / W;
-    m.setAttribute('content', 'width=' + W + ', initial-scale=' + s.toFixed(4) +
-      ', minimum-scale=' + (s * 0.999).toFixed(4) + ', viewport-fit=cover');
-  }
-  fit();
-  try { matchMedia('(orientation:portrait)').addEventListener('change', function () { setTimeout(fit, 150); }); }
-  catch (e) { window.addEventListener('orientationchange', function () { setTimeout(fit, 250); }); }
-})();
-""".replace("__W__", str(PC_VIEW_WIDTH))
-
 MOBILE_CSS = """
 h1{overflow-wrap:anywhere}
 main{padding-left:max(clamp(1.2rem,5vw,4rem),env(safe-area-inset-left))}
@@ -3006,12 +2652,6 @@ main{padding-left:max(clamp(1.2rem,5vw,4rem),env(safe-area-inset-left))}
   h1{font-size:clamp(1.15rem,5.4vw,1.7rem)}
   .tabs label{font-size:.92rem}
   .panel{padding-top:1rem}
-}
-@media (hover:none) and (pointer:coarse){
-  /* スマホで長押ししたとき、リンクのメニューや文字選択が出ないようにする (操作する部品だけ) */
-  .list a,.tabs label,.back,.vback,.subtabs button,.song,.pv,.sw,.tgl,.wall,a[href="#"],main button{
-    -webkit-touch-callout:none;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
-  .wall,.op-video,.op-still{pointer-events:none}
 }
 @media (max-width:480px){
   .lead{font-size:1.05rem}
@@ -3262,11 +2902,10 @@ def build_page() -> str:
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width={PC_VIEW_WIDTH}, viewport-fit=cover">
-<script>{VIEWPORT_JS}</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>{t}</title>
 <meta name="build-id" content="__BUILD_ID__">
-<style>{CSS}{extra_css}{MOBILE_CSS}{btn_css()}{VISITS_CSS}{DMD_CSS}{FUKYOU_CSS}{TABS_CSS}{DEV_CSS}{ENV_CSS}</style>
+<style>{CSS}{extra_css}{MOBILE_CSS}{btn_css()}{VISITS_CSS}{DMD_CSS}{FUKYOU_CSS}{TABS_CSS}{DEV_CSS}</style>
 {sound_boot}{loading_boot}</head>
 <body style="--cols:{COLS};--rows:{ROWS}">
 <input type="checkbox" id="enter" class="sr" aria-label="サイトに入る">
@@ -3311,9 +2950,7 @@ def build_page() -> str:
 </main>
 {sound_js_tag}
 {visits_tag()}
-<script>{NOMENU_JS}</script>
 {dev_tag()}
-{env_tag()}
 <script>{DMD_JS}</script>
 <script>{FUKYOU_JS}</script>
 <script>{TABS_JS}</script>
