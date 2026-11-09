@@ -139,7 +139,7 @@ applySettingsToUI();
 
 // ---------- 小物 ----------
 function status(t){$('st').textContent=t||''}
-const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const esc=s=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function md(t){t=esc(t);
   t=t.replace(/```\w*\n?([\s\S]*?)```/g,(m,c)=>'<pre><code>'+c+'</code></pre>');
   t=t.replace(/`([^`\n]+)`/g,'<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>');return t}

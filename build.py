@@ -2307,20 +2307,15 @@ def dev_tag() -> str:
 
 
 def ensure_gitignore() -> None:
-    """dev_password.txt と env.txt が GitHub に上がらないよう、.gitignore に入れておく (改行のしかたは元のファイルに合わせる)"""
+    """dev_password.txt が GitHub に上がらないよう、.gitignore に入れておく (改行のしかたは元のファイルに合わせる)"""
     p = BASE / ".gitignore"
     try:
         raw = p.read_bytes() if p.is_file() else b""
+        if b"dev_password.txt" in raw:
+            return
         nl = b"\r\n" if b"\r\n" in raw else b"\n"
-        cur = raw
-        for name in (b"dev_password.txt", b"env.txt"):
-            if name in cur:
-                continue
-            if cur and not cur.endswith(b"\n"):
-                cur += nl
-            cur += name + nl
-        if cur != raw:
-            p.write_bytes(cur)
+        lead = b"" if (not raw or raw.endswith(b"\n")) else nl
+        p.write_bytes(raw + lead + b"dev_password.txt" + nl)
     except OSError:
         pass
 
