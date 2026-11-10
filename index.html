@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>xdnet311491/internet archive☆</title>
-<meta name="build-id" content="cc4b1c3de10e">
+<meta name="build-id" content="130f350bfa6d">
 <style>
 :root{--bg:#0a0e2a;--bg2:#141a45;--ink:#eef0ff;--dim:#9aa3d6;--line:#2b3470;--glow:#7df3ff;--gold:#ffe27a;color-scheme:dark}
 *{box-sizing:border-box}
@@ -229,17 +229,6 @@ html.perm-on .perm{display:flex}
 .s-tag{display:inline-block;margin-top:.3rem;padding:.05rem .55rem;border:1px solid var(--glow);border-radius:999px;
   color:var(--glow);font-size:.7rem;font-weight:700;letter-spacing:.05em}
 
-.gate{overflow:hidden}
-.gate > .op,.gate > .hint{position:relative;z-index:1}
-.op-motion{position:absolute;left:0;top:0;width:100%;height:100%;object-fit:cover;z-index:0;
-  pointer-events:none;opacity:0;transition:opacity .8s ease;
-  transform:scale(1.1);filter:blur(6px)}
-.op-veil{position:absolute;inset:0;z-index:0;pointer-events:none;opacity:0;
-  background:rgba(255,255,255,0.25);transition:opacity .8s ease}
-.gate.has-motion .op-motion,.gate.has-motion .op-veil{opacity:1}
-.gate.has-motion .op{mix-blend-mode:multiply}
-@media (prefers-reduced-motion:reduce){.op-motion,.op-veil{display:none}.gate.has-motion .op{mix-blend-mode:normal}}
-
 .upd{position:fixed;left:50%;bottom:max(1.2rem,env(safe-area-inset-bottom));transform:translateX(-50%);
   z-index:200;display:flex;align-items:center;gap:.8rem;max-width:92vw;
   padding:.7rem .9rem .7rem 1.2rem;background:rgba(10,14,42,.94);color:var(--ink);
@@ -251,18 +240,6 @@ html.perm-on .perm{display:flex}
 .upd button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 @keyframes upd-in{from{opacity:0;transform:translate(-50%,12px)}}
 @media (prefers-reduced-motion:reduce){.upd{animation:none}}
-
-.gate.has-op{background:#fff;gap:1.6rem}
-.op{display:block;width:min(92vw,1100px)}
-.op-video,.op-still{display:block;width:100%;height:auto}
-.op-still{display:none}
-.has-op .gt{font-size:clamp(1.1rem,3.4vw,1.6rem);letter-spacing:.18em;color:#2a2a2e;
-  text-shadow:0 0 18px rgba(26,140,255,.35)}
-.has-op .gs{color:#6b7399}
-#enter:focus-visible ~ .gate.has-op{outline-color:#1a8cff}
-.op-fallback .op-video{display:none}
-.op-fallback .op-still{display:block}
-@media (prefers-reduced-motion:reduce){.op-video{display:none}.op-still{display:block}}
 
 h1{overflow-wrap:anywhere}
 main{padding-left:max(clamp(1.2rem,5vw,4rem),env(safe-area-inset-left))}
@@ -380,9 +357,8 @@ main input[type=password]{pointer-events:auto}
 <input type="radio" name="tab" id="t-screen" class="sr"><input type="radio" name="tab" id="t-sound" class="sr">
 <input type="radio" name="tab" id="t-dev" class="sr">
 
-<label class="gate has-op" for="enter">
-  <video class="op-motion" muted loop playsinline disablepictureinpicture aria-hidden="true"></video><span class="op-veil" aria-hidden="true"></span>
-  <span class="op"><video class="op-video" src="siryou/op.mp4" muted playsinline preload="none" disablepictureinpicture aria-hidden="true"></video><img class="op-still" src="siryou/logo.png" alt="" aria-hidden="true" loading="lazy"></span>
+<label class="gate" for="enter">
+  
   <span class="hint"><span class="load" role="status"><span class="spin" aria-hidden="true"></span><span class="pct">読み込み中…</span></span><span class="ready"><span class="gt"><span class="click">Click to enter</span><span class="tap">Tap to enter</span></span><span class="gs">画面をクリック / タップ</span><span class="rot">横画面にすることをお勧めします</span></span></span>
 </label>
 
@@ -400,7 +376,7 @@ main input[type=password]{pointer-events:auto}
   </div>
 </div>
 
-<video class="wall" data-src="siryou/wallpaper.mp4" muted loop playsinline preload="none" disablepictureinpicture aria-hidden="true"></video><noscript><video class="wall" src="siryou/wallpaper.mp4" autoplay muted loop playsinline preload="auto" disablepictureinpicture aria-hidden="true"></video></noscript><div class="wall-shade" style="--shade:0.35"></div>
+
 <div class="edge" aria-hidden="true"></div>
 <canvas id="fx" aria-hidden="true"></canvas>
 <script>
@@ -575,24 +551,6 @@ main input[type=password]{pointer-events:auto}
 </script>
 <script>
 (() => {
-  const v = document.querySelector('.op-video');
-  if (!v) return;
-  const fb = () => document.body.classList.add('op-fallback');
-  v.addEventListener('error', fb);
-  const start = () => { const p = v.play(); if (p && p.catch) p.catch(fb); };
-  if (window.__perm) window.__perm.then(start); else start();
-
-  // 「オープニング画面に戻る」で入場がやり直しになったら、OPアニメをもう一度流す
-  const enter = document.getElementById('enter');
-  if (enter) enter.addEventListener('change', () => {
-    if (enter.checked) return;
-    try { v.currentTime = 0; } catch (e) { /* まだ読み込み中 */ }
-    start();
-  });
-})();
-</script>
-<script>
-(() => {
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter' && e.key !== ' ') return;
     const b = e.target.closest && e.target.closest('.back');
@@ -660,101 +618,6 @@ main input[type=password]{pointer-events:auto}
       v = DEF; apply(v); show();
       try { localStorage.removeItem(KEY); } catch (e) { /* 保存できない環境 */ }
     });
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ui); else ui();
-})();
-</script>
-<script type="application/json" id="wall-cfg">{"def": "wallpaper.mp4", "gate": true, "list": [{"id": "wallpaper.mp4", "src": "siryou/wallpaper.mp4", "kind": "video"}, {"id": "wallpaper2.mp4", "src": "siryou/wallpaper2.mp4", "kind": "video"}, {"id": "wallpaper3.mp4", "src": "siryou/wallpaper3.mp4", "kind": "video"}, {"id": "wallpaper4.mp4", "src": "siryou/wallpaper4.mp4", "kind": "video"}, {"id": "wallpaper5.mp4", "src": "siryou/wallpaper5.mp4", "kind": "video"}, {"id": "wallpaper6.mp4", "src": "siryou/wallpaper6.mp4", "kind": "video"}, {"id": "wallpaper7.mp4", "src": "siryou/wallpaper7.mp4", "kind": "video"}, {"id": "wallpaper8.mp4", "src": "siryou/wallpaper8.mp4", "kind": "video"}, {"id": "wallpaper9.mp4", "src": "siryou/wallpaper9.mp4", "kind": "video"}, {"id": "wallpaper10.mp4", "src": "siryou/wallpaper10.mp4", "kind": "video"}]}</script>
-<script>
-(() => {
-  let cfg = null;
-  try { cfg = JSON.parse(document.getElementById('wall-cfg').textContent); } catch (e) { return; }
-  const list = cfg.list || [];
-  if (!list.length) return;
-  const KEY = 'osaito-wall';
-  const find = (id) => list.find((w) => w.id === id) || null;
-  let saved = null;
-  try { saved = localStorage.getItem(KEY); } catch (e) { /* 保存できない環境 */ }
-  let cur = find(saved) || find(cfg.def) || list[0];
-  const el = () => document.querySelector('.wall');
-
-  function make(w, lazy) {
-    if (w.kind === 'video') {
-      const v = document.createElement('video');
-      v.className = 'wall';
-      v.muted = true; v.loop = true;
-      v.setAttribute('playsinline', ''); v.setAttribute('disablepictureinpicture', ''); v.setAttribute('aria-hidden', 'true');
-      if (lazy) { v.dataset.src = w.src; v.preload = 'none'; }   // 読み込み待ち画面が、全部ダウンロードしてから再生する
-      else { v.preload = 'auto'; v.src = w.src; v.autoplay = true; }
-      return v;
-    }
-    const i = document.createElement('img');
-    i.className = 'wall'; i.alt = ''; i.setAttribute('aria-hidden', 'true'); i.src = w.src;
-    return i;
-  }
-  function drop(old) {
-    if (old && old.tagName === 'VIDEO') { old.removeAttribute('src'); old.load(); }   // 古い動画の再生と通信を止める
-    if (old) old.remove();
-  }
-
-  // 起動時: 最初の壁紙と違う壁紙が選ばれていたら、読み込みが始まる前に差し替える
-  if (cur.id !== cfg.def) {
-    const old = el();
-    if (old) { old.replaceWith(make(cur, !!cfg.gate)); }
-  }
-
-  // 切り替え (新しい壁紙が表示できるようになってから、ふわっと入れ替える)
-  function apply(w, done) {
-    const old = el();
-    const n = make(w, false);
-    n.style.opacity = '0';
-    n.style.transition = 'opacity .6s ease';
-    let fin = false;
-    const show = (ok) => {
-      if (fin) return; fin = true;
-      if (!ok) { drop(n.tagName === 'VIDEO' ? n : null); done(false); return; }
-      if (old) old.after(n); else document.body.prepend(n);
-      requestAnimationFrame(() => requestAnimationFrame(() => { n.style.opacity = '1'; }));
-      if (n.tagName === 'VIDEO') { const p = n.play(); if (p && p.catch) p.catch(() => {}); }
-      setTimeout(() => drop(old), 700);
-      done(true);
-    };
-    n.addEventListener(n.tagName === 'VIDEO' ? 'canplay' : 'load', () => show(true), { once: true });
-    n.addEventListener('error', () => show(false), { once: true });
-    setTimeout(() => show(true), 20000);   // 遅いときは、待たずに出す
-  }
-
-  // 止まった動画を再生し直す (タブの切り替え・省電力モード対策)
-  const resume = () => {
-    const v = el();
-    if (v && v.tagName === 'VIDEO' && v.src && v.paused && !document.hidden) { const p = v.play(); if (p && p.catch) p.catch(() => {}); }
-  };
-  document.addEventListener('visibilitychange', resume);
-  window.addEventListener('pageshow', resume);
-  window.addEventListener('pointerdown', resume, { passive: true });
-
-  function ui() {
-    const btns = [...document.querySelectorAll('.song[data-kind="wall"]')];
-    const msg = document.querySelector('.w-msg');
-    const mark = () => btns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === cur.id)));
-    mark();
-    btns.forEach((b) => b.addEventListener('click', () => {
-      if (b.disabled) return;
-      const w = find(b.dataset.id);
-      if (!w) return;
-      const title = b.querySelector('.s-title').textContent;
-      if (w.id === cur.id) { if (msg) msg.textContent = '「' + title + '」はいま使っている壁紙です。'; return; }
-      if (msg) msg.textContent = '「' + title + '」を読み込んでいます…';
-      apply(w, (ok) => {
-        if (!msg) return;
-        if (!ok) { msg.textContent = '「' + title + '」を読み込めませんでした。元の壁紙のままです。'; return; }
-        cur = w;
-        let kept = true;
-        try { localStorage.setItem(KEY, w.id); } catch (e) { kept = false; }
-        mark();
-        msg.textContent = '「' + title + '」に切り替えました。' + (kept ? '次にサイトを開いたときも、この壁紙になります。' : '(この端末では保存できないため、ページを閉じると元に戻ります)');
-      });
-    }));
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ui); else ui();
 })();
@@ -895,13 +758,13 @@ main input[type=password]{pointer-events:auto}
     <p class="visits" id="visits" hidden>合計閲覧者数 <b id="visits-n">…</b> 人</p>
     <label class="back" for="enter" role="button" tabindex="0">オープニング画面に戻る</label>
   </section>
-  <section class="panel p-pages"><ul class="list"><li><a href="pages/ai-chat.html"><span class="name">AIチャット</span><span class="desc">自分のAPIキーでつなぐAIチャット。プロンプト設定・画像/音声/動画の添付・読み上げ対応(Gemini / OpenRouter / Groq)</span></a></li><li><a href="pages/bgremove.html"><span class="name">背景切り抜きメーカー</span><span class="desc">画像の背景を消して透明なPNGにする。AI(無料・端末内で処理)と、色で消す方法の2種類</span></a></li><li><a href="pages/crop_tool.html"><span class="name">ごめんなさい、開発者用機能ですorz</span><span class="desc">crop_tool.html</span></a></li><li><a href="pages/line-test.html"><span class="name">回線テスト</span><span class="desc">ping・ジッター・ダウンロード/アップロード速度をブラウザだけで測る</span></a></li><li><a href="pages/quake.html"><span class="name">強震モニター</span><span class="desc">防災科研の強震モニターを地図に重ねて表示。直近の震度情報つき</span></a></li><li><a href="pages/symmetry.html"><span class="name">シンメトリ画像メーカー</span><span class="desc">画像の半分(または1/4)を鏡のように折り返して、左右・上下・四方向対称の画像を作る</span></a></li><li><a href="pages/バス系統幕メーカー(配布用).html"><span class="name">バス系統幕メーカー</span><span class="desc">バス系統幕メーカー(配布用).html</span></a></li></ul>
+  <section class="panel p-pages"><ul class="list"><li class="empty">pages フォルダに .html を置いて build.py を実行すると、お遊びコーナーに並びます。</li></ul>
     <div class="viewer"><div class="vbar"><button type="button" class="vback">← 一覧に戻る</button><span class="vtitle"></span></div>
     <iframe title="お遊びコーナー"></iframe></div></section>
   <section class="panel p-channels"><ul class="list"><li><a href="https://www.youtube.com/@8111F_NodaLine" target="_blank" rel="noopener noreferrer"><span class="name">YouTubeチャンネル</span><span class="desc">オデ🤓は面白い😤😤😤</span></a></li><li><a href="https://x.com/@rapid313_nagoya" target="_blank" rel="noopener noreferrer"><span class="name">X</span><span class="desc">自慢とかくだらないお話</span></a></li><li><a href="https://discord.com/oauth2/authorize?client_id=1341385377813889054&amp;permissions=8&amp;integration_type=0&amp;scope=bot+applications.commands" target="_blank" rel="noopener noreferrer"><span class="name">DiscordBot</span><span class="desc">あかふゆの技術力は世界一(要審議)</span></a></li><li><a href="https://www.roblox.com/ja/users/4991709658/profile" target="_blank" rel="noopener noreferrer"><span class="name">Roblox</span><span class="desc">ガキのお遊びだけどガキなので</span></a></li><li><a href="http://guns.lol/xdnet_311491" target="_blank" rel="noopener noreferrer"><span class="name">guns.lol</span><span class="desc">LOL</span></a></li></ul></section>
-  <section class="panel p-fukyou"><div class="fk-view" id="fk-root"><p class="fk-intro">ボタンを長押ししてみてください(しょぼい機能が見れます（笑）)</p><ul class="list"><li><a href="#" class="fk-card has-img" data-go="fk-r0" draggable="false" style="--img:url(siryou/purana.png);--pos:29% 30%"><span class="name">Blue Archive</span><span class="desc">Blue Archiveの個人的好きなキャラ(生徒)紹介です</span></a></li><li><a href="#" class="fk-card has-img" data-go="fk-r1" draggable="false" style="--img:url(siryou/tokyo.jpg);--pos:46% 66%"><span class="name">ウマ娘プリティーダービー</span><span class="desc">開發とちゅ、ゥｗ</span></a></li></ul></div>
-    <div class="fk-view" id="fk-r0" hidden><div class="vbar"><button type="button" class="vback fk-back" data-go="fk-root">← 戻る</button><span class="vtitle">Blue Archive</span></div><div class="dm fk-intro"><div class="dm-t">以下からキャラ(生徒)を選択して<strong>何やってるんですか！勉強してください！</strong>をしよう</div></div><ul class="list"><li><a href="#" class="fk-card has-img" data-go="fk-i0-0" draggable="false" style="--img:url(siryou/key.png);--pos:43% 29%"><span class="name">天童ケイ</span><span class="desc">ケイちゃんかわいいかわいいかわいいかわいいかわいいかわいいかわいいかわいいかわいいかわいいかわいい</span></a></li><li><a href="#" class="fk-card has-img" data-go="fk-i0-1" draggable="false" style="--img:url(siryou/sigure.jpg);--pos:44% 54%"><span class="name">間宵シグレ</span><span class="desc">マジで高校生で飲酒は良くないって</span></a></li><li><a href="#" class="fk-card has-img" data-go="fk-i0-2" draggable="false" style="--img:url(siryou/natu.jpg);--pos:47% 19%"><span class="name">柚鳥ナツ</span><span class="desc">おお/ぎうにうの時間/かんしゃあ～/おっけおっけ/糖分が、足りない！(迫真)</span></a></li><li><a href="#" class="fk-card has-img" data-go="fk-i0-3" draggable="false" style="--img:url(siryou/kayoko.jpg);--pos:45% 59%"><span class="name">鬼方カヨコ</span><span class="desc">キキョウとカズサの湿気部隊の準レギュラー/卑しか女ばい</span></a></li></ul></div>
-    <div class="fk-view" id="fk-i0-0" hidden><div class="vbar"><button type="button" class="vback fk-back" data-go="fk-r0">← 戻る</button><span class="vtitle">Blue Archive › 天童ケイ</span></div><div class="fk-detail"><img class="fk-img" src="siryou/key.png" alt="天童ケイ" loading="lazy"><div class="dm fk-body"><div class="dm-h2" role="heading" aria-level="2">天童ケイ</div><div class="dm-h1" role="heading" aria-level="2">ケイちゃんってかわいい！</div><div class="dm-gap"></div><pre class="dm-cb" data-lang=""><code>1. 概要とプロフィール
+  <section class="panel p-fukyou"><div class="fk-view" id="fk-root"><p class="fk-intro">ボタンを長押ししてみてください(しょぼい機能が見れます（笑）)</p><ul class="list"><li><a href="#" class="fk-card" data-go="fk-r0" draggable="false"><span class="name">Blue Archive</span><span class="desc">Blue Archiveの個人的好きなキャラ(生徒)紹介です</span></a></li><li><a href="#" class="fk-card" data-go="fk-r1" draggable="false"><span class="name">ウマ娘プリティーダービー</span><span class="desc">開發とちゅ、ゥｗ</span></a></li></ul></div>
+    <div class="fk-view" id="fk-r0" hidden><div class="vbar"><button type="button" class="vback fk-back" data-go="fk-root">← 戻る</button><span class="vtitle">Blue Archive</span></div><div class="dm fk-intro"><div class="dm-t">以下からキャラ(生徒)を選択して<strong>何やってるんですか！勉強してください！</strong>をしよう</div></div><ul class="list"><li><a href="#" class="fk-card" data-go="fk-i0-0" draggable="false"><span class="name">天童ケイ</span><span class="desc">ケイちゃんかわいいかわいいかわいいかわいいかわいいかわいいかわいいかわいいかわいいかわいいかわいい</span></a></li><li><a href="#" class="fk-card" data-go="fk-i0-1" draggable="false"><span class="name">間宵シグレ</span><span class="desc">マジで高校生で飲酒は良くないって</span></a></li><li><a href="#" class="fk-card" data-go="fk-i0-2" draggable="false"><span class="name">柚鳥ナツ</span><span class="desc">おお/ぎうにうの時間/かんしゃあ～/おっけおっけ/糖分が、足りない！(迫真)</span></a></li><li><a href="#" class="fk-card" data-go="fk-i0-3" draggable="false"><span class="name">鬼方カヨコ</span><span class="desc">キキョウとカズサの湿気部隊の準レギュラー/卑しか女ばい</span></a></li></ul></div>
+    <div class="fk-view" id="fk-i0-0" hidden><div class="vbar"><button type="button" class="vback fk-back" data-go="fk-r0">← 戻る</button><span class="vtitle">Blue Archive › 天童ケイ</span></div><div class="fk-detail"><div class="dm fk-body"><div class="dm-h2" role="heading" aria-level="2">天童ケイ</div><div class="dm-h1" role="heading" aria-level="2">ケイちゃんってかわいい！</div><div class="dm-gap"></div><pre class="dm-cb" data-lang=""><code>1. 概要とプロフィール
 
     名前：天童ケイ（てんどう けい） ※ガチャ加入時は「ケイ」表記
 
@@ -961,7 +824,7 @@ main input[type=password]{pointer-events:auto}
  ・一部総力戦とか大決戦以外で使う機会はないかな
  ・黒ケイ(どういうものかは参照)もすげえかわいいんだな
  </code></pre></div></div></div>
-    <div class="fk-view" id="fk-i0-1" hidden><div class="vbar"><button type="button" class="vback fk-back" data-go="fk-r0">← 戻る</button><span class="vtitle">Blue Archive › 間宵シグレ</span></div><div class="fk-detail"><img class="fk-img" src="siryou/sigure.jpg" alt="間宵シグレ" loading="lazy"><div class="dm fk-body"><div class="dm-h2" role="heading" aria-level="2">間宵シグレ</div><div class="dm-h1" role="heading" aria-level="2">ヤニねこのアルねこ枠/ミヤコ以上の酒カス</div><div class="dm-gap"></div><pre class="dm-cb" data-lang=""><code>1. 概要とプロフィール
+    <div class="fk-view" id="fk-i0-1" hidden><div class="vbar"><button type="button" class="vback fk-back" data-go="fk-r0">← 戻る</button><span class="vtitle">Blue Archive › 間宵シグレ</span></div><div class="fk-detail"><div class="dm fk-body"><div class="dm-h2" role="heading" aria-level="2">間宵シグレ</div><div class="dm-h1" role="heading" aria-level="2">ヤニねこのアルねこ枠/ミヤコ以上の酒カス</div><div class="dm-gap"></div><pre class="dm-cb" data-lang=""><code>1. 概要とプロフィール
 
     名前：間宵シグレ（まよい しぐれ）
 
@@ -1021,7 +884,7 @@ main input[type=password]{pointer-events:auto}
 ・使うとこはあるけどドンピシャ感はない
 ・嫁
 ・二番目の最推し</code></pre></div></div></div>
-    <div class="fk-view" id="fk-i0-2" hidden><div class="vbar"><button type="button" class="vback fk-back" data-go="fk-r0">← 戻る</button><span class="vtitle">Blue Archive › 柚鳥ナツ</span></div><div class="fk-detail"><img class="fk-img" src="siryou/natu.jpg" alt="柚鳥ナツ" loading="lazy"><div class="dm fk-body"><div class="dm-h2" role="heading" aria-level="2">柚鳥ナツ</div><div class="dm-h1" role="heading" aria-level="2">不思議っ子好きすぎて毎日真似して遊んでる←きも←一人称が「き」の可能性</div><div class="dm-gap"></div><pre class="dm-cb" data-lang=""><code>1. 概要とプロフィール
+    <div class="fk-view" id="fk-i0-2" hidden><div class="vbar"><button type="button" class="vback fk-back" data-go="fk-r0">← 戻る</button><span class="vtitle">Blue Archive › 柚鳥ナツ</span></div><div class="fk-detail"><div class="dm fk-body"><div class="dm-h2" role="heading" aria-level="2">柚鳥ナツ</div><div class="dm-h1" role="heading" aria-level="2">不思議っ子好きすぎて毎日真似して遊んでる←きも←一人称が「き」の可能性</div><div class="dm-gap"></div><pre class="dm-cb" data-lang=""><code>1. 概要とプロフィール
 
     名前：柚鳥ナツ（ゆとり なつ）
 
@@ -1078,7 +941,7 @@ main input[type=password]{pointer-events:auto}
 ・よくちょこぷにでネタにされがち
 ・バンドナツと通常ナツで結構変わりがち
 ・大体ツバキに役目奪われがち(タンカーとして)</code></pre></div></div></div>
-    <div class="fk-view" id="fk-i0-3" hidden><div class="vbar"><button type="button" class="vback fk-back" data-go="fk-r0">← 戻る</button><span class="vtitle">Blue Archive › 鬼方カヨコ</span></div><div class="fk-detail"><img class="fk-img" src="siryou/kayoko.jpg" alt="鬼方カヨコ" loading="lazy"><div class="dm fk-body"><div class="dm-h2" role="heading" aria-level="2">鬼方カヨコ</div><div class="dm-h1" role="heading" aria-level="2">カヨコの髪色ガチたまらん</div><div class="dm-gap"></div><pre class="dm-cb" data-lang=""><code>1. 概要とプロフィール
+    <div class="fk-view" id="fk-i0-3" hidden><div class="vbar"><button type="button" class="vback fk-back" data-go="fk-r0">← 戻る</button><span class="vtitle">Blue Archive › 鬼方カヨコ</span></div><div class="fk-detail"><div class="dm fk-body"><div class="dm-h2" role="heading" aria-level="2">鬼方カヨコ</div><div class="dm-h1" role="heading" aria-level="2">カヨコの髪色ガチたまらん</div><div class="dm-gap"></div><pre class="dm-cb" data-lang=""><code>1. 概要とプロフィール
 
     名前：鬼方カヨコ（おにかた かよこ）
 
@@ -1142,8 +1005,8 @@ main input[type=password]{pointer-events:auto}
 ・DoReMi君、ブルアカを裏切った割にはいい立ち絵を書いてらっしゃる
 ・ブルアカやりたて(2024年くらい)の推しらしい
 ・カヨコに限らずゲヘナ可愛い子多すぎる</code></pre></div></div></div>
-    <div class="fk-view" id="fk-r1" hidden><div class="vbar"><button type="button" class="vback fk-back" data-go="fk-root">← 戻る</button><span class="vtitle">ウマ娘プリティーダービー</span></div><ul class="list"><li><a href="#" class="fk-card has-img" data-go="fk-i1-0" draggable="false" style="--img:url(siryou/daiwa.jpg);--pos:51% 18%"><span class="name">ダイワスカーレット</span><span class="desc">意外と卑しか女ばい系のお馬さん</span></a></li></ul></div>
-    <div class="fk-view" id="fk-i1-0" hidden><div class="vbar"><button type="button" class="vback fk-back" data-go="fk-r1">← 戻る</button><span class="vtitle">ウマ娘プリティーダービー › ダイワスカーレット</span></div><div class="fk-detail"><img class="fk-img" src="siryou/daiwa.jpg" alt="ダイワスカーレット" loading="lazy"><div class="dm fk-body"><div class="dm-h2" role="heading" aria-level="2">ダイワスカーレット</div><div class="dm-h1" role="heading" aria-level="2">陽気っ子はたまらんねえ</div><div class="dm-gap"></div><pre class="dm-cb" data-lang=""><code>1. 概要とプロフィール
+    <div class="fk-view" id="fk-r1" hidden><div class="vbar"><button type="button" class="vback fk-back" data-go="fk-root">← 戻る</button><span class="vtitle">ウマ娘プリティーダービー</span></div><ul class="list"><li><a href="#" class="fk-card" data-go="fk-i1-0" draggable="false"><span class="name">ダイワスカーレット</span><span class="desc">意外と卑しか女ばい系のお馬さん</span></a></li></ul></div>
+    <div class="fk-view" id="fk-i1-0" hidden><div class="vbar"><button type="button" class="vback fk-back" data-go="fk-r1">← 戻る</button><span class="vtitle">ウマ娘プリティーダービー › ダイワスカーレット</span></div><div class="fk-detail"><div class="dm fk-body"><div class="dm-h2" role="heading" aria-level="2">ダイワスカーレット</div><div class="dm-h1" role="heading" aria-level="2">陽気っ子はたまらんねえ</div><div class="dm-gap"></div><pre class="dm-cb" data-lang=""><code>1. 概要とプロフィール
 
     名前：ダイワスカーレット
 
@@ -1190,10 +1053,10 @@ main input[type=password]{pointer-events:auto}
     牝馬二冠＆37年ぶりの有馬記念制覇：2007年の桜花賞・秋華賞を制し、2008年の有馬記念では牝馬として37年ぶりの優勝を達成。
 
     ウオッカとの歴史的死闘：2008年天皇賞（秋）において、ウオッカとわずか2cm差という伝説的な大接戦を演じた。父アグネスタキオン譲りの競走能力と圧倒的な前進気勢で時代を築いた名牝。</code></pre></div></div></div></section>
-  <section class="panel p-screen"><nav class="subtabs" aria-label="画面設定の項目"><button type="button" data-sub="op" aria-selected="true">オープニング画面</button><button type="button" data-sub="wall" aria-selected="false">壁紙</button><button type="button" data-sub="btn" aria-selected="false">ボタン</button></nav><div class="sub" data-sub-panel="op"><div class="sw"><span class="sw-t">特殊モーション</span><button type="button" class="tgl" id="motion-toggle" aria-pressed="true">ON</button></div><p class="s-hint">特殊モーションが付いている曲: 2. けーはまっど、4. ユメ先輩(身内ノリでは牛込柳町パーククリニック)のテーマ、10. ﾕｳｶの絆ダイアローグ、11. 彩りキャンバス。これらの曲を選んでいるときだけ、背景で動画が流れます。</p><p class="s-hint">設定のない曲は、これまで通り白い背景のオープニング画面になります。</p><p class="s-msg m-msg" role="status"></p></div><div class="sub" data-sub-panel="wall" hidden><h2>壁紙の変更</h2><p class="s-hint">選ぶと、その場で壁紙が切り替わります。動画はデータ通信量が大きいので、モバイル回線のときは大きさ(MB)に注意してください。</p><ul class="songs"><li><button type="button" class="song" data-kind="wall" data-id="wallpaper.mp4" data-src="siryou/wallpaper.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">1. mimori</span><span class="s-note">最初の壁紙</span><span class="s-tag">動画 0.9MB</span></span><span class="s-badge">選択中</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper2.mp4" data-src="siryou/wallpaper2.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">2. serina</span><span class="s-tag">動画 1.8MB</span></span><span class="s-badge">選択中</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper3.mp4" data-src="siryou/wallpaper3.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">3. kei1</span><span class="s-tag">動画 6.5MB</span></span><span class="s-badge">選択中</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper4.mp4" data-src="siryou/wallpaper4.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">4. kei2</span><span class="s-tag">動画 2.2MB</span></span><span class="s-badge">選択中</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper5.mp4" data-src="siryou/wallpaper5.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">5. mary</span><span class="s-tag">動画 1.5MB</span></span><span class="s-badge">選択中</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper6.mp4" data-src="siryou/wallpaper6.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">6. jyunko</span><span class="s-tag">動画 2.3MB</span></span><span class="s-badge">選択中</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper7.mp4" data-src="siryou/wallpaper7.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">7. chise</span><span class="s-tag">動画 0.9MB</span></span><span class="s-badge">選択中</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper8.mp4" data-src="siryou/wallpaper8.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">8. shigure</span><span class="s-tag">動画 1.9MB</span></span><span class="s-badge">選択中</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper9.mp4" data-src="siryou/wallpaper9.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">9. miyako</span><span class="s-tag">動画 5.4MB</span></span><span class="s-badge">選択中</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper10.mp4" data-src="siryou/wallpaper10.mp4" aria-pressed="false"><span class="s-main"><span class="s-title">10. azusa</span><span class="s-tag">動画 5.8MB</span></span><span class="s-badge">選択中</span></button></li></ul><p class="s-msg w-msg" role="status"></p></div><div class="sub" data-sub-panel="btn" hidden><h2>ボタンの透明度</h2><p class="s-hint">ボタンやカードなど、押せる部分の背景の濃さを変えます。左いっぱい = 透明、右いっぱい = 完全不透明です。初めは 25% です。選んだ値は、次にサイトを開いたときも使われます。</p><div class="vols" role="group" aria-label="ボタンの透明度"><div class="vol"><label class="vol-t" for="btn-alpha">ボタンの濃さ</label><input type="range" id="btn-alpha" min="0" max="100" step="1" value="25"><output for="btn-alpha">25%</output></div></div><div class="sw"><span class="sw-t">初期値に戻す</span><button type="button" class="tgl" id="btn-alpha-reset">リセット</button></div><p class="s-hint">ボタンにカーソルを合わせると、右端から暗くなって、少し大きくなります。</p></div></section><section class="panel p-sound"><div class="sw"><span class="sw-t">音楽</span><button type="button" class="tgl" id="music-toggle" aria-pressed="false">OFF</button></div><div class="sw"><span class="sw-t">オープニングと一体化</span><button type="button" class="tgl" id="unify-toggle" aria-pressed="false">OFF</button></div><p class="s-hint">ONにすると、オープニングの曲が入場しても切り替わらず、そのままメイン画面でも流れ続けます(音量だけメイン画面用になります)。このあいだ「メイン画面」の曲は使われません。</p><p class="s-msg u-msg" role="status"></p><div class="sw"><span class="sw-t">カーソル効果音</span><button type="button" class="tgl" id="cursor-toggle" aria-pressed="false">OFF</button></div><p class="s-hint">ボタンにカーソルを合わせたときの音です(マウスのときだけ鳴ります)。</p><div class="vols" role="group" aria-label="音量"><div class="vol"><label class="vol-t" for="vol-op">オープニング曲</label><input type="range" id="vol-op" min="0" max="100" step="1" value="70"><output for="vol-op">70%</output></div><div class="vol"><label class="vol-t" for="vol-main">メイン画面の曲</label><input type="range" id="vol-main" min="0" max="100" step="1" value="60"><output for="vol-main">60%</output></div></div><nav class="subtabs" aria-label="サウンド設定の項目"><button type="button" data-sub="op" aria-selected="true">オープニング画面</button><button type="button" data-sub="main" aria-selected="false">メイン画面</button></nav><div class="sub" data-sub-panel="op"><h2>オープニング曲の変更</h2><p class="s-hint">選んだ曲は、次にサイトを開いたときのオープニング画面で流れます。▶ で試し聴きできます。</p><ul class="songs"><li><button type="button" class="song" data-kind="op" data-id="op1.mp3" data-src="siryou/op1.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">1. Aoharu Band Arrange</span><span class="s-note">最初に流れる曲</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op1.mp3" data-src="siryou/op1.mp3" aria-pressed="false" aria-label="1. Aoharu Band Arrangeを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op2.mp3" data-src="siryou/op2.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">2. けーはまっど</span><span class="s-tag">特殊モーション</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op2.mp3" data-src="siryou/op2.mp3" aria-pressed="false" aria-label="2. けーはまっどを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op3.mp3" data-src="siryou/op3.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">3. Rolling Beat</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op3.mp3" data-src="siryou/op3.mp3" aria-pressed="false" aria-label="3. Rolling Beatを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op4.mp3" data-src="siryou/op4.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">4. ユメ先輩(身内ノリでは牛込柳町パーククリニック)のテーマ</span><span class="s-tag">特殊モーション</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op4.mp3" data-src="siryou/op4.mp3" aria-pressed="false" aria-label="4. ユメ先輩(身内ノリでは牛込柳町パーククリニック)のテーマを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op5.mp3" data-src="siryou/op5.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">5. OperationD</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op5.mp3" data-src="siryou/op5.mp3" aria-pressed="false" aria-label="5. OperationDを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op6.mp3" data-src="siryou/op6.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">6. Dreaming Trip</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op6.mp3" data-src="siryou/op6.mp3" aria-pressed="false" aria-label="6. Dreaming Tripを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op7.mp3" data-src="siryou/op7.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">7. Welcome School</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op7.mp3" data-src="siryou/op7.mp3" aria-pressed="false" aria-label="7. Welcome Schoolを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op8.mp3" data-src="siryou/op8.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">8. Our Oath</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op8.mp3" data-src="siryou/op8.mp3" aria-pressed="false" aria-label="8. Our Oathを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op9.mp3" data-src="siryou/op9.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">9. Alkaline tears</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op9.mp3" data-src="siryou/op9.mp3" aria-pressed="false" aria-label="9. Alkaline tearsを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op10.mp3" data-src="siryou/op10.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">10. ﾕｳｶの絆ダイアローグ</span><span class="s-tag">特殊モーション</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op10.mp3" data-src="siryou/op10.mp3" aria-pressed="false" aria-label="10. ﾕｳｶの絆ダイアローグを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op11.mp3" data-src="siryou/op11.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">11. 彩りキャンバス</span><span class="s-tag">特殊モーション</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="op" data-id="op11.mp3" data-src="siryou/op11.mp3" aria-pressed="false" aria-label="11. 彩りキャンバスを試し聴き">▶</button></li></ul><p class="s-msg" role="status"></p></div><div class="sub" data-sub-panel="main" hidden><h2>メイン画面の曲の変更</h2><p class="s-hint">選ぶと、いま流れているメイン画面の曲がすぐ切り替わります。▶ で試し聴きできます。</p><ul class="songs"><li><button type="button" class="song" data-kind="main" data-id="sound.mp3" data-src="siryou/sound.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">1. Unwelcome School(8bit remix)</span><span class="s-note">最初に流れる曲</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="main" data-id="sound.mp3" data-src="siryou/sound.mp3" aria-pressed="false" aria-label="1. Unwelcome School(8bit remix)を試し聴き">▶</button></li><li><button type="button" class="song" data-kind="main" data-id="sound2.mp3" data-src="siryou/sound2.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">2. Step by Step</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="main" data-id="sound2.mp3" data-src="siryou/sound2.mp3" aria-pressed="false" aria-label="2. Step by Stepを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="main" data-id="sound3.mp3" data-src="siryou/sound3.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">3. Romantic Smile</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="main" data-id="sound3.mp3" data-src="siryou/sound3.mp3" aria-pressed="false" aria-label="3. Romantic Smileを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="main" data-id="sound4.mp3" data-src="siryou/sound4.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">4. Midsummer Cat</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="main" data-id="sound4.mp3" data-src="siryou/sound4.mp3" aria-pressed="false" aria-label="4. Midsummer Catを試し聴き">▶</button></li><li><button type="button" class="song" data-kind="main" data-id="sound5.mp3" data-src="siryou/sound5.mp3" aria-pressed="false"><span class="s-main"><span class="s-title">5. Walktrought</span></span><span class="s-badge">選択中</span></button><button type="button" class="pv" data-kind="main" data-id="sound5.mp3" data-src="siryou/sound5.mp3" aria-pressed="false" aria-label="5. Walktroughtを試し聴き">▶</button></li></ul><p class="s-msg" role="status"></p></div></section>
+  <section class="panel p-screen"><nav class="subtabs" aria-label="画面設定の項目"><button type="button" data-sub="op" aria-selected="true">オープニング画面</button><button type="button" data-sub="wall" aria-selected="false">壁紙</button><button type="button" data-sub="btn" aria-selected="false">ボタン</button></nav><div class="sub" data-sub-panel="op"><div class="sw"><span class="sw-t">特殊モーション</span><button type="button" class="tgl" id="motion-toggle" aria-pressed="true">ON</button></div><p class="s-hint">いま特殊モーションが設定されている曲はありません。(build.py の OP_MOTIONS に曲と動画を書くと使えます)</p><p class="s-hint">設定のない曲は、これまで通り白い背景のオープニング画面になります。</p><p class="s-msg m-msg" role="status"></p></div><div class="sub" data-sub-panel="wall" hidden><h2>壁紙の変更</h2><p class="s-hint">選ぶと、その場で壁紙が切り替わります。動画はデータ通信量が大きいので、モバイル回線のときは大きさ(MB)に注意してください。</p><ul class="songs"><li><button type="button" class="song" data-kind="wall" data-id="wallpaper.mp4" data-src="siryou/wallpaper.mp4" aria-pressed="false" disabled><span class="s-main"><span class="s-title">1. mimori</span><span class="s-note">最初の壁紙</span></span><span class="s-badge off">ファイルなし</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper2.mp4" data-src="siryou/wallpaper2.mp4" aria-pressed="false" disabled><span class="s-main"><span class="s-title">2. serina</span></span><span class="s-badge off">ファイルなし</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper3.mp4" data-src="siryou/wallpaper3.mp4" aria-pressed="false" disabled><span class="s-main"><span class="s-title">3. kei1</span></span><span class="s-badge off">ファイルなし</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper4.mp4" data-src="siryou/wallpaper4.mp4" aria-pressed="false" disabled><span class="s-main"><span class="s-title">4. kei2</span></span><span class="s-badge off">ファイルなし</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper5.mp4" data-src="siryou/wallpaper5.mp4" aria-pressed="false" disabled><span class="s-main"><span class="s-title">5. mary</span></span><span class="s-badge off">ファイルなし</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper6.mp4" data-src="siryou/wallpaper6.mp4" aria-pressed="false" disabled><span class="s-main"><span class="s-title">6. jyunko</span></span><span class="s-badge off">ファイルなし</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper7.mp4" data-src="siryou/wallpaper7.mp4" aria-pressed="false" disabled><span class="s-main"><span class="s-title">7. chise</span></span><span class="s-badge off">ファイルなし</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper8.mp4" data-src="siryou/wallpaper8.mp4" aria-pressed="false" disabled><span class="s-main"><span class="s-title">8. shigure</span></span><span class="s-badge off">ファイルなし</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper9.mp4" data-src="siryou/wallpaper9.mp4" aria-pressed="false" disabled><span class="s-main"><span class="s-title">9. miyako</span></span><span class="s-badge off">ファイルなし</span></button></li><li><button type="button" class="song" data-kind="wall" data-id="wallpaper10.mp4" data-src="siryou/wallpaper10.mp4" aria-pressed="false" disabled><span class="s-main"><span class="s-title">10. azusa</span></span><span class="s-badge off">ファイルなし</span></button></li></ul><p class="s-msg w-msg" role="status"></p></div><div class="sub" data-sub-panel="btn" hidden><h2>ボタンの透明度</h2><p class="s-hint">ボタンやカードなど、押せる部分の背景の濃さを変えます。左いっぱい = 透明、右いっぱい = 完全不透明です。初めは 25% です。選んだ値は、次にサイトを開いたときも使われます。</p><div class="vols" role="group" aria-label="ボタンの透明度"><div class="vol"><label class="vol-t" for="btn-alpha">ボタンの濃さ</label><input type="range" id="btn-alpha" min="0" max="100" step="1" value="25"><output for="btn-alpha">25%</output></div></div><div class="sw"><span class="sw-t">初期値に戻す</span><button type="button" class="tgl" id="btn-alpha-reset">リセット</button></div><p class="s-hint">ボタンにカーソルを合わせると、右端から暗くなって、少し大きくなります。</p></div></section><section class="panel p-sound"><div class="sw"><span class="sw-t">音楽</span><button type="button" class="tgl" id="music-toggle" aria-pressed="false">OFF</button></div><div class="sw"><span class="sw-t">オープニングと一体化</span><button type="button" class="tgl" id="unify-toggle" aria-pressed="false">OFF</button></div><p class="s-hint">ONにすると、オープニングの曲が入場しても切り替わらず、そのままメイン画面でも流れ続けます(音量だけメイン画面用になります)。このあいだ「メイン画面」の曲は使われません。</p><p class="s-msg u-msg" role="status"></p><div class="sw"><span class="sw-t">カーソル効果音</span><button type="button" class="tgl" id="cursor-toggle" aria-pressed="false">OFF</button></div><p class="s-hint">ボタンにカーソルを合わせたときの音です(マウスのときだけ鳴ります)。</p><p class="s-hint">siryou に cursol.mp3 を置くと使えるようになります。</p><div class="vols" role="group" aria-label="音量"><div class="vol"><label class="vol-t" for="vol-op">オープニング曲</label><input type="range" id="vol-op" min="0" max="100" step="1" value="70"><output for="vol-op">70%</output></div><div class="vol"><label class="vol-t" for="vol-main">メイン画面の曲</label><input type="range" id="vol-main" min="0" max="100" step="1" value="60"><output for="vol-main">60%</output></div></div><nav class="subtabs" aria-label="サウンド設定の項目"><button type="button" data-sub="op" aria-selected="true">オープニング画面</button><button type="button" data-sub="main" aria-selected="false">メイン画面</button></nav><div class="sub" data-sub-panel="op"><h2>オープニング曲の変更</h2><p class="s-hint">選んだ曲は、次にサイトを開いたときのオープニング画面で流れます。▶ で試し聴きできます。</p><ul class="songs"><li><button type="button" class="song" data-kind="op" data-id="op1.mp3" data-src="siryou/op1.mp3" aria-pressed="false" disabled><span class="s-main"><span class="s-title">1. Aoharu Band Arrange</span><span class="s-note">最初に流れる曲</span></span><span class="s-badge off">ファイルなし</span></button><button type="button" class="pv" data-kind="op" data-id="op1.mp3" data-src="siryou/op1.mp3" aria-pressed="false" aria-label="1. Aoharu Band Arrangeを試し聴き" disabled>▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op2.mp3" data-src="siryou/op2.mp3" aria-pressed="false" disabled><span class="s-main"><span class="s-title">2. けーはまっど</span></span><span class="s-badge off">ファイルなし</span></button><button type="button" class="pv" data-kind="op" data-id="op2.mp3" data-src="siryou/op2.mp3" aria-pressed="false" aria-label="2. けーはまっどを試し聴き" disabled>▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op3.mp3" data-src="siryou/op3.mp3" aria-pressed="false" disabled><span class="s-main"><span class="s-title">3. Rolling Beat</span></span><span class="s-badge off">ファイルなし</span></button><button type="button" class="pv" data-kind="op" data-id="op3.mp3" data-src="siryou/op3.mp3" aria-pressed="false" aria-label="3. Rolling Beatを試し聴き" disabled>▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op4.mp3" data-src="siryou/op4.mp3" aria-pressed="false" disabled><span class="s-main"><span class="s-title">4. ユメ先輩(身内ノリでは牛込柳町パーククリニック)のテーマ</span></span><span class="s-badge off">ファイルなし</span></button><button type="button" class="pv" data-kind="op" data-id="op4.mp3" data-src="siryou/op4.mp3" aria-pressed="false" aria-label="4. ユメ先輩(身内ノリでは牛込柳町パーククリニック)のテーマを試し聴き" disabled>▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op5.mp3" data-src="siryou/op5.mp3" aria-pressed="false" disabled><span class="s-main"><span class="s-title">5. OperationD</span></span><span class="s-badge off">ファイルなし</span></button><button type="button" class="pv" data-kind="op" data-id="op5.mp3" data-src="siryou/op5.mp3" aria-pressed="false" aria-label="5. OperationDを試し聴き" disabled>▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op6.mp3" data-src="siryou/op6.mp3" aria-pressed="false" disabled><span class="s-main"><span class="s-title">6. Dreaming Trip</span></span><span class="s-badge off">ファイルなし</span></button><button type="button" class="pv" data-kind="op" data-id="op6.mp3" data-src="siryou/op6.mp3" aria-pressed="false" aria-label="6. Dreaming Tripを試し聴き" disabled>▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op7.mp3" data-src="siryou/op7.mp3" aria-pressed="false" disabled><span class="s-main"><span class="s-title">7. Welcome School</span></span><span class="s-badge off">ファイルなし</span></button><button type="button" class="pv" data-kind="op" data-id="op7.mp3" data-src="siryou/op7.mp3" aria-pressed="false" aria-label="7. Welcome Schoolを試し聴き" disabled>▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op8.mp3" data-src="siryou/op8.mp3" aria-pressed="false" disabled><span class="s-main"><span class="s-title">8. Our Oath</span></span><span class="s-badge off">ファイルなし</span></button><button type="button" class="pv" data-kind="op" data-id="op8.mp3" data-src="siryou/op8.mp3" aria-pressed="false" aria-label="8. Our Oathを試し聴き" disabled>▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op9.mp3" data-src="siryou/op9.mp3" aria-pressed="false" disabled><span class="s-main"><span class="s-title">9. Alkaline tears</span></span><span class="s-badge off">ファイルなし</span></button><button type="button" class="pv" data-kind="op" data-id="op9.mp3" data-src="siryou/op9.mp3" aria-pressed="false" aria-label="9. Alkaline tearsを試し聴き" disabled>▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op10.mp3" data-src="siryou/op10.mp3" aria-pressed="false" disabled><span class="s-main"><span class="s-title">10. ﾕｳｶの絆ダイアローグ</span></span><span class="s-badge off">ファイルなし</span></button><button type="button" class="pv" data-kind="op" data-id="op10.mp3" data-src="siryou/op10.mp3" aria-pressed="false" aria-label="10. ﾕｳｶの絆ダイアローグを試し聴き" disabled>▶</button></li><li><button type="button" class="song" data-kind="op" data-id="op11.mp3" data-src="siryou/op11.mp3" aria-pressed="false" disabled><span class="s-main"><span class="s-title">11. 彩りキャンバス</span></span><span class="s-badge off">ファイルなし</span></button><button type="button" class="pv" data-kind="op" data-id="op11.mp3" data-src="siryou/op11.mp3" aria-pressed="false" aria-label="11. 彩りキャンバスを試し聴き" disabled>▶</button></li></ul><p class="s-msg" role="status"></p></div><div class="sub" data-sub-panel="main" hidden><h2>メイン画面の曲の変更</h2><p class="s-hint">選ぶと、いま流れているメイン画面の曲がすぐ切り替わります。▶ で試し聴きできます。</p><ul class="songs"><li><button type="button" class="song" data-kind="main" data-id="sound.mp3" data-src="siryou/sound.mp3" aria-pressed="false" disabled><span class="s-main"><span class="s-title">1. Unwelcome School(8bit remix)</span><span class="s-note">最初に流れる曲</span></span><span class="s-badge off">ファイルなし</span></button><button type="button" class="pv" data-kind="main" data-id="sound.mp3" data-src="siryou/sound.mp3" aria-pressed="false" aria-label="1. Unwelcome School(8bit remix)を試し聴き" disabled>▶</button></li><li><button type="button" class="song" data-kind="main" data-id="sound2.mp3" data-src="siryou/sound2.mp3" aria-pressed="false" disabled><span class="s-main"><span class="s-title">2. Step by Step</span></span><span class="s-badge off">ファイルなし</span></button><button type="button" class="pv" data-kind="main" data-id="sound2.mp3" data-src="siryou/sound2.mp3" aria-pressed="false" aria-label="2. Step by Stepを試し聴き" disabled>▶</button></li><li><button type="button" class="song" data-kind="main" data-id="sound3.mp3" data-src="siryou/sound3.mp3" aria-pressed="false" disabled><span class="s-main"><span class="s-title">3. Romantic Smile</span></span><span class="s-badge off">ファイルなし</span></button><button type="button" class="pv" data-kind="main" data-id="sound3.mp3" data-src="siryou/sound3.mp3" aria-pressed="false" aria-label="3. Romantic Smileを試し聴き" disabled>▶</button></li><li><button type="button" class="song" data-kind="main" data-id="sound4.mp3" data-src="siryou/sound4.mp3" aria-pressed="false" disabled><span class="s-main"><span class="s-title">4. Midsummer Cat</span></span><span class="s-badge off">ファイルなし</span></button><button type="button" class="pv" data-kind="main" data-id="sound4.mp3" data-src="siryou/sound4.mp3" aria-pressed="false" aria-label="4. Midsummer Catを試し聴き" disabled>▶</button></li><li><button type="button" class="song" data-kind="main" data-id="sound5.mp3" data-src="siryou/sound5.mp3" aria-pressed="false" disabled><span class="s-main"><span class="s-title">5. Walktrought</span></span><span class="s-badge off">ファイルなし</span></button><button type="button" class="pv" data-kind="main" data-id="sound5.mp3" data-src="siryou/sound5.mp3" aria-pressed="false" aria-label="5. Walktroughtを試し聴き" disabled>▶</button></li></ul><p class="s-msg" role="status"></p></div></section>
   <section class="panel p-dev"><div class="dev-lock" id="dev-lock"><p class="s-hint">パスワードを入力してください。</p><div class="dev-row"><input type="password" id="dev-pw" class="dev-pw" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="パスワード"><button type="button" class="tgl" id="dev-go">入る</button></div><p class="s-msg" id="dev-msg" role="status"></p></div><div class="dev-body" id="dev-body" hidden><h2>開発者機能</h2><div class="sw"><span class="sw-t">この版のID</span><code class="dev-code" id="dev-build">-</code></div><div class="sw"><span class="sw-t">閲覧者数の「カウント済み」を解除</span><button type="button" class="tgl" id="dev-recount">解除</button></div><div class="sw"><span class="sw-t">保存した設定をすべて消す</span><button type="button" class="tgl" id="dev-reset">消す</button></div><div class="sw"><span class="sw-t">ロックする</span><button type="button" class="tgl" id="dev-relock">ロック</button></div><p class="s-msg" id="dev-msg2" role="status"></p></div></section>
 </main>
-<script type="application/json" id="sound-cfg">{"opVolume": 0.7, "mainVolume": 0.6, "opFadeIn": 0.8, "opFadeOut": 2.0, "mainFadeIn": 2.5, "cursorSrc": "siryou/cursol.mp3", "cursorVolume": 0.5, "motions": {"op4.mp3": "siryou/motion4.mp4", "op10.mp3": "siryou/motion10.mp4", "op11.mp3": "siryou/motion11.mp4", "op2.mp3": "siryou/motion2.mp4"}}</script>
+<script type="application/json" id="sound-cfg">{"opVolume": 0.7, "mainVolume": 0.6, "opFadeIn": 0.8, "opFadeOut": 2.0, "mainFadeIn": 2.5, "cursorSrc": "", "cursorVolume": 0.5, "motions": {}}</script>
 <script>
 (() => {
   const root = document.documentElement;
