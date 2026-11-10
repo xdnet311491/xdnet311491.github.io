@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ブルアカ ガチャシミュレーター</title>
+<meta name="description" content="ブルアカの生徒募集(ガチャ)を再現した非公式シミュレーター。ピックアップ/周年(★3 6%)、10連保証、呼び出しチャージつき">
+<style>
+
+:root{color-scheme:dark;--bg:#0a0e2a;--card:#141a45;--line:#2c3670;--ink:#eef0ff;--dim:#9fb0ff;--glow:#7df3ff;--gold:#ffd479}
+*{box-sizing:border-box}
+body{margin:0;padding:1.2rem;font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic",sans-serif;background:var(--bg);color:var(--ink);max-width:760px;margin-inline:auto;line-height:1.6}
+a{color:var(--glow)}h1{font-size:1.35rem;margin:.2rem 0 .3rem}h2{font-size:.95rem;margin:.1rem 0 .5rem;color:var(--dim)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:.9rem 1.1rem;margin-bottom:.8rem}
+.dim{color:var(--dim);font-size:.8rem}
+button,.btn{font:inherit;font-weight:700;padding:.55rem 1.1rem;border:0;border-radius:999px;background:var(--glow);color:#06102a;cursor:pointer}
+button.sub{background:#1d2660;color:#cfd6ff;border:1px solid var(--line)}
+button:disabled{opacity:.45;cursor:default}
+input,select,textarea{font:inherit;color:var(--ink);background:#0d1233;border:1px solid var(--line);border-radius:10px;padding:.5rem .7rem;width:100%}
+textarea{min-height:5.5rem;resize:vertical}
+
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:.45rem}
+@media (max-width:560px){.grid{grid-template-columns:repeat(2,1fr)}}
+.sc{position:relative;border-radius:12px;padding:.7rem .4rem;text-align:center;border:1px solid var(--line);background:#101640;min-height:5.2rem;display:flex;flex-direction:column;justify-content:center;gap:.1rem;animation:pop .45s ease both;animation-delay:calc(var(--i)*.08s)}
+.sc .st{font-size:.75rem;letter-spacing:.05em}.sc .nm{font-weight:800;font-size:.95rem;word-break:break-all}.sc .fm{font-size:.65rem;color:var(--dim)}
+.sc.r1{border-color:#3a4388}.sc.r1 .st{color:#8fb7ff}
+.sc.r2{border-color:#d9b24a;background:#1c1a3a}.sc.r2 .st{color:#ffd479}
+.sc.r3{border:2px solid transparent;background:linear-gradient(#241a4a,#241a4a) padding-box,linear-gradient(120deg,#ff8ad8,#7df3ff,#ffe27a,#ff8ad8) border-box;box-shadow:0 0 18px rgba(255,160,240,.45)}
+.sc.r3 .st{color:#ffb7ee}.sc.r3 .nm{color:#fff}
+.tg{position:absolute;top:.2rem;right:.3rem;font-size:.6rem;font-weight:800;border-radius:6px;padding:0 .3rem}
+.tg.pu{background:var(--gold);color:#2a1c00}.tg.lm{background:#c79bff;color:#190a2b}.tg.fc{background:#7df3ff;color:#06102a;left:.3rem;right:auto}
+@keyframes pop{from{opacity:0;transform:translateY(8px) scale(.85)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.sc{animation:none}}
+.btns{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.7rem}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+.seg{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.6rem}
+.seg button{background:#1d2660;color:#cfd6ff;border:1px solid var(--line);border-radius:12px}
+.seg button.on{background:var(--glow);color:#06102a;border-color:var(--glow)}
+table.rt{width:100%;border-collapse:collapse;font-size:.82rem}
+table.rt td{padding:.2rem .3rem;border-bottom:1px dashed #232c66}table.rt td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:.3rem .8rem;font-size:.88rem}
+.stats b{color:var(--gold)}
+.bar{height:8px;border-radius:99px;background:#0d1233;border:1px solid var(--line);overflow:hidden;margin:.2rem 0 .1rem}.bar i{display:block;height:100%;background:linear-gradient(90deg,#7df3ff,#ff8ad8)}
+.sum{font-weight:800;margin:.1rem 0 .6rem}
+.dex{display:grid;grid-template-columns:repeat(auto-fill,minmax(6.2rem,1fr));gap:.3rem;font-size:.78rem}
+.dex div{border:1px solid var(--line);border-radius:8px;padding:.25rem .35rem;color:#5d6aa8;background:#0d1233;word-break:break-all}
+.dex div.own{color:var(--ink);border-color:#d9b24a;background:#1c1a3a}.dex div b{color:var(--gold);margin-left:.15rem}
+details summary{cursor:pointer;color:var(--dim);font-weight:700}
+</style>
+</head>
+<body>
+<h1>ブルアカ ガチャシミュレーター</h1>
+<p class="dim">生徒募集を再現した遊び用シミュレーターです(青輝石は減らないし、本物の課金とは無関係)。画像はなく名前だけの表示です。</p>
+
+<div class="card">
+  <h2>募集の種類</h2>
+  <div class="seg" id="seg">
+    <button data-t="pu" class="on">ピックアップ募集(★3 3%)</button>
+    <button data-t="fes">周年・フェス(★3 6%)</button>
+  </div>
+  <div class="two">
+    <div><div class="dim">ピックアップ①</div><select id="p1"></select></div>
+    <div><div class="dim">ピックアップ②(なしでもOK)</div><select id="p2"></select></div>
+  </div>
+  <div class="btns">
+    <button id="b1">1回</button>
+    <button id="b10">10連</button>
+    <button id="b100">100連</button>
+    <button id="bpu" class="sub">ピックアップが出るまで</button>
+  </div>
+  <div class="dim" style="margin-top:.5rem">1回 = 青輝石120個。10連の10回目は★2以上確定です。</div>
+</div>
+
+<div class="card" id="resCard" hidden>
+  <h2>結果</h2>
+  <div id="res"></div>
+</div>
+
+<div class="card">
+  <h2>いまの確率</h2>
+  <table class="rt" id="rt"></table>
+  <div class="dim" style="margin-top:.4rem">ピックアップは1体につき0.7%。周年は「限定すり抜け」枠(他の限定★3)が合計0.9%です。</div>
+</div>
+
+<div class="card">
+  <h2>成績(この端末に保存)</h2>
+  <div class="stats" id="stats"></div>
+  <div style="margin-top:.5rem"><span class="dim">呼び出しチャージ(ピックアップを引くと0に戻る)</span>
+    <div class="bar"><i id="chbar"></i></div><div class="dim" id="chtxt"></div></div>
+  <div class="btns"><button class="sub" id="reset">成績をリセット</button></div>
+</div>
+
+<div class="card">
+  <h2>★3図鑑 <span class="dim" id="dexc"></span></h2>
+  <div class="dex" id="dex"></div>
+  <details style="margin-top:.6rem"><summary>★2・★1の所持数を見る</summary><div class="dex" id="dex21" style="margin-top:.5rem"></div></details>
+</div>
+
+<p class="dim">※ 非公式のファンメイドです。確率は公式発表・攻略サイトの情報(2026年11月時点)にもとづく簡易再現で、実際のゲームと同じ結果を保証するものではありません。
+「呼び出しチャージ」は2026年7月29日の仕様変更の報道を参考に、100回目で50%・200回目で必ずピックアップ★3、という解釈で実装しています。
+各生徒のレア度は参考値です(このファイルの ROSTER を書き換えれば直せます)。</p>
+<p id="bk"><a href="../">サイトに戻る</a></p>
+
+<script>
+const ROSTER = [{"n":"アイリ","f":"栗村アイリ","r":2,"l":0,"id":0},{"n":"アオバ","f":"内海アオバ","r":2,"l":0,"id":1},{"n":"アカネ","f":"室笠アカネ","r":2,"l":0,"id":2},{"n":"アカリ","f":"鰐渕アカリ","r":2,"l":0,"id":3},{"n":"アコ","f":"天雨アコ","r":2,"l":0,"id":4},{"n":"アズサ","f":"白州アズサ","r":3,"l":0,"id":5},{"n":"アスナ","f":"一之瀬アスナ","r":3,"l":0,"id":6},{"n":"アツコ","f":"秤アツコ","r":1,"l":0,"id":7},{"n":"アヤネ","f":"奥空アヤネ","r":2,"l":0,"id":8},{"n":"アリス","f":"天童アリス","r":3,"l":0,"id":9},{"n":"ケイ","f":"天童ケイ","r":3,"l":1,"id":10},{"n":"アル","f":"陸八魔アル","r":3,"l":0,"id":11},{"n":"アンナ","f":"仁木アンナ","r":2,"l":0,"id":12},{"n":"イオリ","f":"銀鏡イオリ","r":3,"l":0,"id":13},{"n":"イズナ","f":"久田イズナ","r":3,"l":0,"id":14},{"n":"イズミ","f":"獅子堂イズミ","r":3,"l":0,"id":15},{"n":"イチカ","f":"仲正イチカ","r":2,"l":0,"id":16},{"n":"イブキ","f":"丹花イブキ","r":3,"l":0,"id":17},{"n":"イロハ","f":"棗イロハ","r":3,"l":0,"id":18},{"n":"ウイ","f":"古関ウイ","r":2,"l":0,"id":19},{"n":"ウタハ","f":"白石ウタハ","r":2,"l":0,"id":20},{"n":"ウミカ","f":"里浜ウミカ","r":2,"l":0,"id":21},{"n":"エイミ","f":"和泉元エイミ","r":2,"l":0,"id":22},{"n":"エリ","f":"白尾エリ","r":2,"l":0,"id":23},{"n":"エリカ","f":"旗見エリカ","r":2,"l":0,"id":24},{"n":"エリナ","f":"二木エリナ","r":2,"l":0,"id":25},{"n":"オトギ","f":"天神山オトギ","r":1,"l":0,"id":26},{"n":"カエデ","f":"勇美カエデ","r":3,"l":0,"id":27},{"n":"カズサ","f":"杏山カズサ","r":3,"l":0,"id":28},{"n":"カスミ","f":"鬼怒川カスミ","r":2,"l":0,"id":29},{"n":"カノエ","f":"板垣カノエ","r":2,"l":0,"id":30},{"n":"カホ","f":"桑上カホ","r":2,"l":0,"id":31},{"n":"カヨコ","f":"鬼方カヨコ","r":3,"l":0,"id":32},{"n":"カリン","f":"角楯カリン","r":2,"l":0,"id":33},{"n":"カンナ","f":"尾刃カンナ","r":2,"l":0,"id":34},{"n":"キキョウ","f":"桐生キキョウ","r":2,"l":0,"id":35},{"n":"キサキ","f":"竜華キサキ","r":2,"l":0,"id":36},{"n":"キララ","f":"夜桜キララ","r":2,"l":0,"id":37},{"n":"キリノ","f":"中務キリノ","r":2,"l":0,"id":38},{"n":"クルミ","f":"高倉クルミ","r":2,"l":0,"id":39},{"n":"ココナ","f":"春原ココナ","r":3,"l":0,"id":40},{"n":"ココロ","f":"渡海ココロ","r":2,"l":0,"id":41},{"n":"コタマ","f":"音瀬コタマ","r":1,"l":0,"id":42},{"n":"コトネ","f":"渕上コトネ","r":2,"l":0,"id":43},{"n":"コトリ","f":"豊見コトリ","r":2,"l":0,"id":44},{"n":"コノカ","f":"志真コノカ","r":2,"l":0,"id":45},{"n":"コハル","f":"下江コハル","r":1,"l":0,"id":46},{"n":"コユキ","f":"黒崎コユキ","r":2,"l":0,"id":47},{"n":"サオリ","f":"錠前サオリ","r":3,"l":0,"id":48},{"n":"サキ","f":"空井サキ","r":2,"l":0,"id":49},{"n":"サクラコ","f":"歌住サクラコ","r":2,"l":0,"id":50},{"n":"サツキ","f":"京極サツキ","r":3,"l":0,"id":51},{"n":"サヤ","f":"薬子サヤ","r":3,"l":0,"id":52},{"n":"シグレ","f":"間宵シグレ","r":3,"l":0,"id":53},{"n":"シズコ","f":"河和シズコ","r":2,"l":0,"id":54},{"n":"シミコ","f":"円堂シミコ","r":1,"l":0,"id":55},{"n":"シュン","f":"春原シュン","r":3,"l":0,"id":56},{"n":"ジュリ","f":"牛牧ジュリ","r":1,"l":0,"id":57},{"n":"ジュンコ","f":"赤司ジュンコ","r":2,"l":0,"id":58},{"n":"シロコ","f":"砂狼シロコ","r":3,"l":0,"id":59},{"n":"スズミ","f":"守月スズミ","r":1,"l":0,"id":60},{"n":"スバル","f":"梯スバル","r":2,"l":0,"id":61},{"n":"スミレ","f":"乙花スミレ","r":2,"l":0,"id":62},{"n":"セイア","f":"百合園セイア","r":3,"l":0,"id":63},{"n":"セナ","f":"氷室セナ","r":2,"l":0,"id":64},{"n":"セリカ","f":"黒見セリカ","r":2,"l":0,"id":65},{"n":"セリナ","f":"鷲見セリナ","r":2,"l":0,"id":66},{"n":"タカネ","f":"三善タカネ","r":2,"l":0,"id":67},{"n":"チアキ","f":"元宮チアキ","r":2,"l":0,"id":68},{"n":"チェリノ","f":"連河チェリノ","r":2,"l":0,"id":69},{"n":"チセ","f":"和楽チセ","r":2,"l":0,"id":70},{"n":"チナツ","f":"火宮チナツ","r":2,"l":0,"id":71},{"n":"チヒロ","f":"各務チヒロ","r":2,"l":0,"id":72},{"n":"ツクヨ","f":"大野ツクヨ","r":2,"l":0,"id":73},{"n":"ツバキ","f":"春日ツバキ","r":2,"l":0,"id":74},{"n":"ツムギ","f":"椎名ツムギ","r":2,"l":0,"id":75},{"n":"ツルギ","f":"剣先ツルギ","r":3,"l":0,"id":76},{"n":"トキ","f":"飛鳥馬トキ","r":3,"l":0,"id":77},{"n":"トモエ","f":"佐城トモエ","r":2,"l":0,"id":78},{"n":"ナギサ","f":"桐藤ナギサ","r":3,"l":0,"id":79},{"n":"ナグサ","f":"御稜ナグサ","r":2,"l":0,"id":80},{"n":"ナツ","f":"柚鳥ナツ","r":2,"l":0,"id":81},{"n":"ニコ","f":"吉野ニコ","r":2,"l":0,"id":82},{"n":"ニヤ","f":"天地ニヤ","r":2,"l":0,"id":83},{"n":"ネル","f":"美甘ネル","r":3,"l":0,"id":84},{"n":"ノア","f":"生塩ノア","r":3,"l":0,"id":85},{"n":"ノゾミ","f":"橘ノゾミ","r":2,"l":0,"id":86},{"n":"ノドカ","f":"天見ノドカ","r":1,"l":0,"id":87},{"n":"ノノミ","f":"十六夜ノノミ","r":2,"l":0,"id":88},{"n":"ハスミ","f":"羽川ハスミ","r":3,"l":0,"id":89},{"n":"ハナエ","f":"朝顔ハナエ","r":2,"l":0,"id":90},{"n":"ハナコ","f":"浦和ハナコ","r":3,"l":0,"id":91},{"n":"ハルカ","f":"伊草ハルカ","r":1,"l":0,"id":92},{"n":"ハルナ","f":"黒館ハルナ","r":2,"l":0,"id":93},{"n":"ハレ","f":"小鈎ハレ","r":2,"l":0,"id":94},{"n":"ヒカリ","f":"橘ヒカリ","r":2,"l":0,"id":95},{"n":"ヒナ","f":"空崎ヒナ","r":3,"l":0,"id":96},{"n":"ヒナタ","f":"若葉ヒナタ","r":3,"l":0,"id":97},{"n":"ヒビキ","f":"猫塚ヒビキ","r":3,"l":0,"id":98},{"n":"ヒフミ","f":"阿慈谷ヒフミ","r":3,"l":0,"id":99},{"n":"ヒマリ","f":"明星ヒマリ","r":3,"l":0,"id":100},{"n":"ヒヨリ","f":"槌永ヒヨリ","r":3,"l":0,"id":101},{"n":"フィーナ","f":"朝比奈フィーナ","r":3,"l":0,"id":102},{"n":"フウカ","f":"愛清フウカ","r":2,"l":0,"id":103},{"n":"フブキ","f":"合歓垣フブキ","r":1,"l":0,"id":104},{"n":"フユ","f":"若狭フユ","r":2,"l":0,"id":105},{"n":"ホシノ","f":"小鳥遊ホシノ","r":3,"l":0,"id":106},{"n":"マキ","f":"小塗マキ","r":3,"l":0,"id":107},{"n":"マコト","f":"羽沼マコト","r":2,"l":0,"id":108},{"n":"マシロ","f":"静山マシロ","r":3,"l":0,"id":109},{"n":"マリー","f":"伊落マリー","r":2,"l":0,"id":110},{"n":"マリナ","f":"池倉マリナ","r":2,"l":0,"id":111},{"n":"ミカ","f":"聖園ミカ","r":3,"l":0,"id":112},{"n":"ミサキ","f":"戒野ミサキ","r":3,"l":0,"id":113},{"n":"ミチル","f":"千鳥ミチル","r":1,"l":0,"id":114},{"n":"ミドリ","f":"才羽ミドリ","r":2,"l":0,"id":115},{"n":"ミナ","f":"近衛ミナ","r":2,"l":0,"id":116},{"n":"ミネ","f":"蒼森ミネ","r":3,"l":0,"id":117},{"n":"ミノリ","f":"安守ミノリ","r":3,"l":0,"id":118},{"n":"ミモリ","f":"水羽ミモリ","r":3,"l":0,"id":119},{"n":"ミヤコ","f":"月雪ミヤコ","r":3,"l":0,"id":120},{"n":"ミユ","f":"霞沢ミユ","r":1,"l":0,"id":121},{"n":"ミヨ","f":"桜井ミヨ","r":2,"l":0,"id":122},{"n":"ムツキ","f":"浅黄ムツキ","r":2,"l":0,"id":123},{"n":"メグ","f":"下倉メグ","r":2,"l":0,"id":124},{"n":"メル","f":"姫木メル","r":2,"l":0,"id":125},{"n":"モエ","f":"風倉モエ","r":2,"l":0,"id":126},{"n":"モミジ","f":"秋泉モミジ","r":2,"l":0,"id":127},{"n":"モモイ","f":"才羽モモイ","r":2,"l":0,"id":128},{"n":"ヤクモ","f":"荒槇ヤクモ","r":3,"l":0,"id":129},{"n":"ユウカ","f":"早瀬ユウカ","r":2,"l":0,"id":130},{"n":"ユカリ","f":"勘解由小路ユカリ","r":2,"l":0,"id":131},{"n":"ユズ","f":"花岡ユズ","r":2,"l":0,"id":132},{"n":"ヨシミ","f":"伊原木ヨシミ","r":1,"l":0,"id":133},{"n":"ラナ","f":"古畑ラナ","r":2,"l":0,"id":134},{"n":"ラブ","f":"河駒風ラブ","r":2,"l":0,"id":135},{"n":"リオ","f":"調月リオ","r":3,"l":1,"id":136},{"n":"リツ","f":"薄葉リツ","r":2,"l":0,"id":137},{"n":"ルミ","f":"朱城ルミ","r":2,"l":0,"id":138},{"n":"レイ","f":"野正レイ","r":2,"l":0,"id":139},{"n":"レイサ","f":"宇沢レイサ","r":2,"l":0,"id":140},{"n":"レイジョ","f":"鹿山レイジョ","r":2,"l":0,"id":141},{"n":"レナ","f":"衣斐レナ","r":2,"l":0,"id":142},{"n":"レンゲ","f":"不破レンゲ","r":2,"l":0,"id":143},{"n":"ワカモ","f":"狐坂ワカモ","r":3,"l":0,"id":144},{"n":"ヒナ(ドレス)","f":"空崎ヒナ","r":3,"l":1,"id":145},{"n":"ホシノ(水着)","f":"小鳥遊ホシノ","r":3,"l":1,"id":146},{"n":"ホシノ(臨戦)","f":"小鳥遊ホシノ","r":3,"l":1,"id":147},{"n":"シロコ*テラー","f":"砂狼シロコ","r":3,"l":1,"id":148},{"n":"ナギサ(水着)","f":"桐藤ナギサ","r":3,"l":1,"id":149},{"n":"ミカ(水着)","f":"聖園ミカ","r":3,"l":1,"id":150},{"n":"アリス(臨戦)","f":"天童アリス","r":3,"l":1,"id":151},{"n":"ハナコ(水着)","f":"浦和ハナコ","r":3,"l":1,"id":152},{"n":"ネル(制服)","f":"美甘ネル","r":3,"l":1,"id":153},{"n":"イブキ(水着)","f":"丹花イブキ","r":3,"l":1,"id":154},{"n":"イロハ(水着)","f":"棗イロハ","r":3,"l":1,"id":155}];   // n:表示名 f:フルネーム r:レア度 l:限定(1) id:通し番号
+const STONE = 120, KEY = "ba_gacha_v1";
+const R3 = ROSTER.filter(s => s.r === 3), PERM3 = R3.filter(s => !s.l), LIM3 = R3.filter(s => s.l);
+const R2 = ROSTER.filter(s => s.r === 2), R1 = ROSTER.filter(s => s.r === 1);
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function fresh(){ return {v:1, pulls:0, r3:0, r2:0, r1:0, since3:0, puGot:0, charge:{pu:0, fes:0}, own:{}, cfg:{type:"pu", p1:null, p2:null}}; }
+function load(){
+  try { const j = JSON.parse(localStorage.getItem(KEY)); if (j && j.v === 1) return Object.assign(fresh(), j); } catch (e) {}
+  return fresh();
+}
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} }
+let st = load();
+
+// ---- ピックアップ選択 ----
+function fillSelects(){
+  const opt = (s, sel) => "<option value=\"" + s.id + "\"" + (sel ? " selected" : "") + ">" + esc(s.n) + (s.l ? "(限定)" : "") + "</option>";
+  if (st.cfg.p1 == null) st.cfg.p1 = (LIM3[0] || R3[0]).id;
+  $("p1").innerHTML = R3.map(s => opt(s, s.id === st.cfg.p1)).join("");
+  $("p2").innerHTML = "<option value=\"\">なし</option>" + R3.map(s => opt(s, s.id === st.cfg.p2)).join("");
+}
+function pus(){
+  const a = [ROSTER[st.cfg.p1]];
+  if (st.cfg.p2 != null && st.cfg.p2 !== st.cfg.p1) a.push(ROSTER[st.cfg.p2]);
+  return a;
+}
+// ---- 確率表 ----
+function table(){
+  const fes = st.cfg.type === "fes", P = pus(), rows = [];
+  P.forEach(s => rows.push({k:"pu", s, w:0.7}));
+  if (fes) { const pool = LIM3.filter(x => !P.includes(x)); if (pool.length) rows.push({k:"lim", pool, w:0.9}); }
+  const used = rows.reduce((a, r) => a + r.w, 0);
+  rows.push({k:"s3", pool:PERM3.filter(x => !P.includes(x)), w:Math.max(0, (fes ? 6.0 : 3.0) - used)});
+  rows.push({k:"s2", pool:R2, w:18.5});
+  rows.push({k:"s1", pool:R1, w:fes ? 75.5 : 78.5});
+  return rows;
+}
+function showRates(){
+  const T = table(), f = n => n.toFixed(2) + "%";
+  const lab = {s3:"★3(その他)", lim:"★3 限定すり抜け", s2:"★2", s1:"★1"};
+  $("rt").innerHTML = T.map(r => "<tr><td>" + (r.k === "pu" ? "★3 ピックアップ: " + esc(r.s.n) : lab[r.k]) + "</td><td>" + f(r.w) + "</td></tr>").join("");
+}
+// ---- 抽選 ----
+const rnd = a => a[Math.floor(Math.random() * a.length)];
+function pick(rows){
+  let r = Math.random() * 100;
+  for (const row of rows) { if (r < row.w) return row.k === "pu" ? row.s : rnd(row.pool); r -= row.w; }
+  return rnd(R1);
+}
+function pull(rows, last){
+  const type = st.cfg.type, P = pus();
+  st.charge[type]++;
+  const c = st.charge[type];
+  let s = null, forced = false;
+  if (c >= 200 || (c === 100 && Math.random() < 0.5)) { s = rnd(P); forced = true; }
+  if (!s) { s = pick(rows); if (last && s.r === 1) s = rnd(R2); }
+  st.pulls++;
+  if (s.r === 3) { st.r3++; st.since3 = 0; } else { st.since3++; if (s.r === 2) st.r2++; else st.r1++; }
+  const isPU = P.includes(s);
+  if (isPU) { st.charge[type] = 0; st.puGot++; }
+  st.own[s.id] = (st.own[s.id] || 0) + 1;
+  return {s, forced, isPU, fes: st.cfg.type === "fes" && s.l && !isPU};
+}
+function run(n, tenMode){
+  const rows = table(), out = [];
+  for (let i = 0; i < n; i++) out.push(pull(rows, tenMode ? (i % 10 === 9) : false));
+  save();
+  return out;
+}
+// ---- 表示 ----
+function card(x, i){
+  const s = x.s;
+  const tag = x.isPU ? "<span class=\"tg pu\">PU</span>" : (s.l && s.r === 3 ? "<span class=\"tg lm\">限定</span>" : "");
+  return "<div class=\"sc r" + s.r + "\" style=\"--i:" + i + "\">" + tag + "<span class=\"st\">" + "★".repeat(s.r) + "</span><span class=\"nm\">" + esc(s.n) + "</span><span class=\"fm\">" + esc(s.f) + "</span></div>";
+}
+function render(list, note){
+  $("resCard").hidden = false;
+  const c3 = list.filter(x => x.s.r === 3), c2 = list.filter(x => x.s.r === 2).length, c1 = list.filter(x => x.s.r === 1).length;
+  let html = "<div class=\"sum\">" + list.length + "回 / ★3 ×" + c3.length + " ・ ★2 ×" + c2 + " ・ ★1 ×" + c1 + " ・ 青輝石 " + (list.length * STONE).toLocaleString() + "個分" + (note ? "<br><span class=\"dim\">" + note + "</span>" : "") + "</div>";
+  const show = list.length <= 10 ? list : c3;
+  html += show.length ? "<div class=\"grid\">" + show.map(card).join("") + "</div>" : "<p class=\"dim\">★3は出ませんでした…</p>";
+  if (list.length > 10) html += "<p class=\"dim\">(★3だけ表示しています)</p>";
+  $("res").innerHTML = html;
+}
+function stats(){
+  const t = st.pulls, rate = t ? (st.r3 / t * 100).toFixed(2) + "%" : "-";
+  $("stats").innerHTML =
+    "<div>総回数: <b>" + t.toLocaleString() + "</b></div><div>青輝石: <b>" + (t * STONE).toLocaleString() + "</b>個</div>" +
+    "<div>★3: <b>" + st.r3 + "</b>体(" + rate + ")</div><div>前回の★3から: <b>" + st.since3 + "</b>回</div>" +
+    "<div>★2: <b>" + st.r2 + "</b></div><div>ピックアップ獲得: <b>" + st.puGot + "</b>体</div>";
+  const c = st.charge[st.cfg.type];
+  $("chbar").style.width = Math.min(100, c / 200 * 100) + "%";
+  $("chtxt").textContent = c + " / 200(この種類の募集)。100回目は50%、200回目は確定でピックアップ。";
+  const own = st.own, d3 = R3.filter(s => own[s.id]).length;
+  $("dexc").textContent = d3 + " / " + R3.length;
+  $("dex").innerHTML = R3.map(s => "<div class=\"" + (own[s.id] ? "own" : "") + "\">" + esc(s.n) + (own[s.id] > 1 ? "<b>×" + own[s.id] + "</b>" : "") + "</div>").join("");
+  $("dex21").innerHTML = R2.concat(R1).filter(s => own[s.id]).map(s => "<div class=\"own\">" + "★" + s.r + " " + esc(s.n) + "<b>×" + own[s.id] + "</b></div>").join("") || "<span class=\"dim\">まだありません</span>";
+}
+function refresh(){ showRates(); stats(); }
+
+$("seg").addEventListener("click", e => {
+  const b = e.target.closest("button[data-t]"); if (!b) return;
+  st.cfg.type = b.dataset.t; save();
+  for (const x of $("seg").children) x.classList.toggle("on", x === b);
+  refresh();
+});
+$("p1").onchange = () => { st.cfg.p1 = +$("p1").value; save(); refresh(); };
+$("p2").onchange = () => { st.cfg.p2 = $("p2").value === "" ? null : +$("p2").value; save(); refresh(); };
+$("b1").onclick = () => { render(run(1, false)); refresh(); };
+$("b10").onclick = () => { render(run(10, true)); refresh(); };
+$("b100").onclick = () => { render(run(100, true)); refresh(); };
+$("bpu").onclick = () => {
+  const all = []; let n = 0;
+  while (n < 40) { const r = run(10, true); all.push(...r); n++; if (r.some(x => x.isPU)) break; }
+  const at = all.findIndex(x => x.isPU) + 1;
+  render(all, at ? "ピックアップは" + at + "回目で獲得(10連ごとに引きました)" : "");
+  refresh();
+};
+$("reset").onclick = () => { if (confirm("成績と図鑑をリセットしますか?")) { const cfg = st.cfg; st = fresh(); st.cfg = cfg; save(); $("resCard").hidden = true; refresh(); } };
+
+for (const x of $("seg").children) x.classList.toggle("on", x.dataset.t === st.cfg.type);
+fillSelects(); refresh();
+</script>
+</body>
+</html>

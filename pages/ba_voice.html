@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ブルアカ声優特定メーカー</title>
+<meta name="description" content="声優の名前を入れて、ブルアカを担当している(いない)かを判定。他作品のキャスト表を貼ってまとめて調べるのもOK">
+<style>
+
+:root{color-scheme:dark;--bg:#0a0e2a;--card:#141a45;--line:#2c3670;--ink:#eef0ff;--dim:#9fb0ff;--glow:#7df3ff;--gold:#ffd479}
+*{box-sizing:border-box}
+body{margin:0;padding:1.2rem;font-family:system-ui,-apple-system,"Hiragino Sans","Yu Gothic",sans-serif;background:var(--bg);color:var(--ink);max-width:760px;margin-inline:auto;line-height:1.6}
+a{color:var(--glow)}h1{font-size:1.35rem;margin:.2rem 0 .3rem}h2{font-size:.95rem;margin:.1rem 0 .5rem;color:var(--dim)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:.9rem 1.1rem;margin-bottom:.8rem}
+.dim{color:var(--dim);font-size:.8rem}
+button,.btn{font:inherit;font-weight:700;padding:.55rem 1.1rem;border:0;border-radius:999px;background:var(--glow);color:#06102a;cursor:pointer}
+button.sub{background:#1d2660;color:#cfd6ff;border:1px solid var(--line)}
+button:disabled{opacity:.45;cursor:default}
+input,select,textarea{font:inherit;color:var(--ink);background:#0d1233;border:1px solid var(--line);border-radius:10px;padding:.5rem .7rem;width:100%}
+textarea{min-height:5.5rem;resize:vertical}
+
+.row{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.6rem}
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.8rem}
+.tabs button{background:#1d2660;color:#cfd6ff;border:1px solid var(--line);border-radius:12px}
+.tabs button.on{background:var(--glow);color:#06102a;border-color:var(--glow)}
+.res{display:grid;grid-template-columns:2.2rem 1fr;gap:.6rem;align-items:start;border-radius:12px;padding:.7rem .9rem;margin-bottom:.5rem;border:1px solid var(--line);background:#101640}
+.res .ic{font-size:1.5rem;line-height:1.1}
+.res .who{font-weight:800}
+.res .badge{display:inline-block;font-size:.75rem;font-weight:800;border-radius:999px;padding:.05rem .6rem;margin-left:.4rem;vertical-align:middle}
+.res.ok{border-color:#2fbf8a}.res.ok .badge{background:#2fbf8a;color:#04150f}
+.res.co{border-color:#c79bff}.res.co .badge{background:#c79bff;color:#190a2b}
+.res.old{border-color:var(--gold)}.res.old .badge{background:var(--gold);color:#2a1c00}
+.res.no{border-color:#e0607a}.res.no .badge{background:#e0607a;color:#2b0610}
+.chars{font-size:.9rem;margin-top:.15rem}
+.chars span.tag{font-size:.7rem;color:var(--dim);margin-left:.25rem}
+.sum{font-weight:800;margin:.2rem 0 .6rem}
+.maybe button{padding:.15rem .7rem;font-size:.8rem;margin:.2rem .3rem 0 0}
+details summary{cursor:pointer;color:var(--dim);font-weight:700}
+.list{columns:2 14rem;font-size:.85rem;margin-top:.6rem}.list div{break-inside:avoid;padding:.12rem 0;border-bottom:1px dashed #232c66}
+</style>
+</head>
+<body>
+<h1>ブルアカ声優特定メーカー</h1>
+<p class="dim">「あれ、この人ブルアカ担当してた?」を調べるツール。声優の名前を入れて判定します(判定は全部この端末の中で行われます)。</p>
+
+<div class="tabs" id="tabs">
+  <button class="on" data-t="a">声優から調べる</button>
+  <button data-t="b">キャラから調べる</button>
+</div>
+
+<div id="pa">
+  <div class="card">
+    <h2>声優の名前(複数OK)</h2>
+    <textarea id="in" placeholder="例: 田中美海&#10;1行に1人、または「、」「,」「/」区切り&#10;「キャラ名：声優名」の形でもOK(他作品のキャスト表をそのまま貼れます)"></textarea>
+    <div class="row">
+      <button id="go">判定する</button>
+      <button class="sub" id="clr">クリア</button>
+      <button class="sub" id="cp" hidden>結果をコピー</button>
+    </div>
+  </div>
+  <div id="out"></div>
+</div>
+
+<div id="pb" hidden>
+  <div class="card">
+    <h2>キャラの名前(一部でもOK)</h2>
+    <input id="q" placeholder="例: ホシノ / 天童 / アリス" autocomplete="off">
+  </div>
+  <div id="qout"></div>
+</div>
+
+<div class="card">
+  <details>
+    <summary>登録リスト一覧を見る(148キャラ)</summary>
+    <div class="list" id="all"></div>
+  </details>
+</div>
+
+<p class="dim">※ 判定の基準は、登録リスト(2026年11月時点で用意した一覧)です。「リストになし」は「担当していない可能性が高い」という意味で、
+モブ・ゲスト出演・追加実装キャラなど、リストに載っていない役までは保証できません。非公式のファンメイドです。</p>
+<p id="bk"><a href="../">サイトに戻る</a></p>
+
+<script>
+const DATA = [{"c":"栗村アイリ","v":[{"n":"水森ちこ","old":false}],"collab":false},{"c":"内海アオバ","v":[{"n":"田嶌紗蘭","old":false}],"collab":false},{"c":"室笠アカネ","v":[{"n":"原由実","old":false}],"collab":false},{"c":"鰐渕アカリ","v":[{"n":"森嶋優花","old":false}],"collab":false},{"c":"天雨アコ","v":[{"n":"高野麻里佳","old":false}],"collab":false},{"c":"白州アズサ","v":[{"n":"種田梨沙","old":false}],"collab":false},{"c":"一之瀬アスナ","v":[{"n":"長谷川育美","old":false}],"collab":false},{"c":"秤アツコ","v":[{"n":"花澤香菜","old":false}],"collab":false},{"c":"奥空アヤネ","v":[{"n":"原田彩楓","old":false}],"collab":false},{"c":"天童アリス / ケイ","v":[{"n":"田中美海","old":false}],"collab":false},{"c":"陸八魔アル","v":[{"n":"近藤玲奈","old":false}],"collab":false},{"c":"仁木アンナ","v":[{"n":"高森奈津美","old":false}],"collab":false},{"c":"銀鏡イオリ","v":[{"n":"佐倉綾音","old":false}],"collab":false},{"c":"久田イズナ","v":[{"n":"阿澄佳奈","old":false}],"collab":false},{"c":"獅子堂イズミ","v":[{"n":"久保ユリカ","old":false}],"collab":false},{"c":"仲正イチカ","v":[{"n":"鷲見友美ジェナ","old":false}],"collab":false},{"c":"丹花イブキ","v":[{"n":"春瀬なつみ","old":false}],"collab":false},{"c":"棗イロハ","v":[{"n":"福圓美里","old":false}],"collab":false},{"c":"古関ウイ","v":[{"n":"後藤沙緒里","old":false}],"collab":false},{"c":"白石ウタハ","v":[{"n":"青地希望","old":false}],"collab":false},{"c":"里浜ウミカ","v":[{"n":"新田ひより","old":false}],"collab":false},{"c":"和泉元エイミ","v":[{"n":"松永あかね","old":false}],"collab":false},{"c":"白尾エリ","v":[{"n":"今泉りおな","old":false}],"collab":false},{"c":"旗見エリカ","v":[{"n":"中野さいま","old":false}],"collab":false},{"c":"二木エリナ","v":[{"n":"菱川花菜","old":false}],"collab":false},{"c":"天神山オトギ","v":[{"n":"佐々木瞳","old":false}],"collab":false},{"c":"勇美カエデ","v":[{"n":"加藤英美里","old":false}],"collab":false},{"c":"杏山カズサ","v":[{"n":"夏吉ゆうこ","old":false}],"collab":false},{"c":"鬼怒川カスミ","v":[{"n":"上坂すみれ","old":false}],"collab":false},{"c":"板垣カノエ","v":[{"n":"氷青","old":false}],"collab":false},{"c":"桑上カホ","v":[{"n":"松井恵理子","old":false}],"collab":false},{"c":"鬼方カヨコ","v":[{"n":"藤井ゆきよ","old":false}],"collab":false},{"c":"角楯カリン","v":[{"n":"沼倉愛美","old":false}],"collab":false},{"c":"尾刃カンナ","v":[{"n":"松岡美里","old":false}],"collab":false},{"c":"桐生キキョウ","v":[{"n":"小松未可子","old":false}],"collab":false},{"c":"竜華キサキ","v":[{"n":"相坂優歌","old":false}],"collab":false},{"c":"夜桜キララ","v":[{"n":"山下七海","old":false}],"collab":false},{"c":"中務キリノ","v":[{"n":"中島優衣","old":false}],"collab":false},{"c":"高倉クルミ","v":[{"n":"橘一花","old":false}],"collab":false},{"c":"春原ココナ","v":[{"n":"五十嵐裕美","old":false}],"collab":false},{"c":"渡海ココロ","v":[{"n":"百瀬紗菜","old":false}],"collab":false},{"c":"音瀬コタマ","v":[{"n":"高川みな","old":false}],"collab":false},{"c":"渕上コトネ","v":[{"n":"天音ゆかり","old":false}],"collab":false},{"c":"豊見コトリ","v":[{"n":"篠原なるみ","old":false}],"collab":false},{"c":"志真コノカ","v":[{"n":"千本木彩花","old":false}],"collab":false},{"c":"下江コハル","v":[{"n":"赤尾ひかる","old":false}],"collab":false},{"c":"黒崎コユキ","v":[{"n":"乾夏寧","old":false}],"collab":false},{"c":"錠前サオリ","v":[{"n":"石上静香","old":false}],"collab":false},{"c":"空井サキ","v":[{"n":"友永朱音","old":false}],"collab":false},{"c":"歌住サクラコ","v":[{"n":"加隈亜衣","old":false}],"collab":false},{"c":"京極サツキ","v":[{"n":"櫻井浩美","old":false}],"collab":false},{"c":"薬子サヤ","v":[{"n":"田村ゆかり","old":false}],"collab":false},{"c":"間宵シグレ","v":[{"n":"河瀬茉希","old":false}],"collab":false},{"c":"河和シズコ","v":[{"n":"森永千才","old":false}],"collab":false},{"c":"円堂シミコ","v":[{"n":"富田美憂","old":false}],"collab":false},{"c":"春原シュン","v":[{"n":"伊藤静","old":false}],"collab":false},{"c":"牛牧ジュリ","v":[{"n":"田辺留依","old":false}],"collab":false},{"c":"赤司ジュンコ","v":[{"n":"金元寿子","old":false}],"collab":false},{"c":"砂狼シロコ","v":[{"n":"小倉唯","old":false}],"collab":false},{"c":"守月スズミ","v":[{"n":"社本悠","old":false}],"collab":false},{"c":"梯スバル","v":[{"n":"天海由梨奈","old":false}],"collab":false},{"c":"乙花スミレ","v":[{"n":"今井麻美","old":false}],"collab":false},{"c":"百合園セイア","v":[{"n":"種﨑敦美","old":false}],"collab":false},{"c":"氷室セナ","v":[{"n":"大西沙織","old":false}],"collab":false},{"c":"黒見セリカ","v":[{"n":"大橋彩香","old":false}],"collab":false},{"c":"鷲見セリナ","v":[{"n":"涼本あきほ","old":false}],"collab":false},{"c":"三善タカネ","v":[{"n":"春海百乃","old":false}],"collab":false},{"c":"元宮チアキ","v":[{"n":"菅野真衣","old":false}],"collab":false},{"c":"連河チェリノ","v":[{"n":"丹下桜","old":true},{"n":"矢野妃菜喜","old":false}],"collab":false},{"c":"和楽チセ","v":[{"n":"嶋村侑","old":false}],"collab":false},{"c":"火宮チナツ","v":[{"n":"香月はるか","old":false}],"collab":false},{"c":"各務チヒロ","v":[{"n":"山村響","old":false}],"collab":false},{"c":"大野ツクヨ","v":[{"n":"後藤彩佐","old":false}],"collab":false},{"c":"春日ツバキ","v":[{"n":"白砂沙帆","old":false}],"collab":false},{"c":"椎名ツムギ","v":[{"n":"高田紗希衣","old":false}],"collab":false},{"c":"剣先ツルギ","v":[{"n":"小林ゆう","old":false}],"collab":false},{"c":"飛鳥馬トキ","v":[{"n":"石川由依","old":false}],"collab":false},{"c":"佐城トモエ","v":[{"n":"厚木那奈美","old":false}],"collab":false},{"c":"桐藤ナギサ","v":[{"n":"早見沙織","old":false}],"collab":false},{"c":"御稜ナグサ","v":[{"n":"佐倉薫","old":false}],"collab":false},{"c":"柚鳥ナツ","v":[{"n":"長縄まりあ","old":false}],"collab":false},{"c":"吉野ニコ","v":[{"n":"浅見香月","old":false}],"collab":false},{"c":"天地ニヤ","v":[{"n":"植田佳奈","old":false}],"collab":false},{"c":"美甘ネル","v":[{"n":"小清水亜美","old":false}],"collab":false},{"c":"生塩ノア","v":[{"n":"鈴代紗弓","old":false}],"collab":false},{"c":"橘ノゾミ","v":[{"n":"星谷美緒","old":false}],"collab":false},{"c":"天見ノドカ","v":[{"n":"佐藤聡美","old":false}],"collab":false},{"c":"十六夜ノノミ","v":[{"n":"三浦千幸","old":false}],"collab":false},{"c":"羽川ハスミ","v":[{"n":"瀬戸麻沙美","old":false}],"collab":false},{"c":"朝顔ハナエ","v":[{"n":"優木かな","old":false}],"collab":false},{"c":"浦和ハナコ","v":[{"n":"豊田萌絵","old":false}],"collab":false},{"c":"伊草ハルカ","v":[{"n":"石飛恵里花","old":false}],"collab":false},{"c":"黒館ハルナ","v":[{"n":"田所あずさ","old":false}],"collab":false},{"c":"小鈎ハレ","v":[{"n":"貝原怜奈","old":false}],"collab":false},{"c":"橘ヒカリ","v":[{"n":"石見舞菜香","old":false}],"collab":false},{"c":"空崎ヒナ","v":[{"n":"広橋涼","old":false}],"collab":false},{"c":"若葉ヒナタ","v":[{"n":"日高里菜","old":false}],"collab":false},{"c":"猫塚ヒビキ","v":[{"n":"名塚佳織","old":false}],"collab":false},{"c":"阿慈谷ヒフミ","v":[{"n":"本渡楓","old":false}],"collab":false},{"c":"明星ヒマリ","v":[{"n":"ゆかな","old":false}],"collab":false},{"c":"槌永ヒヨリ","v":[{"n":"中原麻衣","old":false}],"collab":false},{"c":"朝比奈フィーナ","v":[{"n":"木戸衣吹","old":false}],"collab":false},{"c":"愛清フウカ","v":[{"n":"ファイルーズあい","old":false}],"collab":false},{"c":"合歓垣フブキ","v":[{"n":"平山笑美","old":false}],"collab":false},{"c":"若狭フユ","v":[{"n":"十二稜子","old":false}],"collab":false},{"c":"小鳥遊ホシノ","v":[{"n":"花守ゆみり","old":false}],"collab":false},{"c":"小塗マキ","v":[{"n":"三上枝織","old":false}],"collab":false},{"c":"羽沼マコト","v":[{"n":"浅川悠","old":false}],"collab":false},{"c":"静山マシロ","v":[{"n":"鬼頭明里","old":false}],"collab":false},{"c":"伊落マリー","v":[{"n":"小澤亜李","old":false}],"collab":false},{"c":"池倉マリナ","v":[{"n":"平井祥恵","old":false}],"collab":false},{"c":"聖園ミカ","v":[{"n":"東山奈央","old":false}],"collab":false},{"c":"戒野ミサキ","v":[{"n":"土屋李央","old":false}],"collab":false},{"c":"千鳥ミチル","v":[{"n":"水橋かおり","old":false}],"collab":false},{"c":"才羽ミドリ","v":[{"n":"高田憂希","old":false}],"collab":false},{"c":"近衛ミナ","v":[{"n":"佐藤利奈","old":false}],"collab":false},{"c":"蒼森ミネ","v":[{"n":"堀江由衣","old":false}],"collab":false},{"c":"安守ミノリ","v":[{"n":"菊池紗矢香","old":false}],"collab":false},{"c":"水羽ミモリ","v":[{"n":"田中理恵","old":false}],"collab":false},{"c":"月雪ミヤコ","v":[{"n":"藤田茜","old":false}],"collab":false},{"c":"霞沢ミユ","v":[{"n":"後藤邑子","old":false}],"collab":false},{"c":"桜井ミヨ","v":[{"n":"花岩香奈","old":false}],"collab":false},{"c":"浅黄ムツキ","v":[{"n":"大久保瑠美","old":false}],"collab":false},{"c":"下倉メグ","v":[{"n":"愛原ありさ","old":false}],"collab":false},{"c":"姫木メル","v":[{"n":"新井里美","old":false}],"collab":false},{"c":"風倉モエ","v":[{"n":"井澤詩織","old":false}],"collab":false},{"c":"秋泉モミジ","v":[{"n":"大亀あすか","old":false}],"collab":false},{"c":"才羽モモイ","v":[{"n":"徳井青空","old":false}],"collab":false},{"c":"荒槇ヤクモ","v":[{"n":"碧乃梨心","old":false}],"collab":false},{"c":"早瀬ユウカ","v":[{"n":"春花らん","old":false}],"collab":false},{"c":"勘解由小路ユカリ","v":[{"n":"村上まなつ","old":false}],"collab":false},{"c":"花岡ユズ","v":[{"n":"寺澤百花","old":false}],"collab":false},{"c":"伊原木ヨシミ","v":[{"n":"真野あゆみ","old":false}],"collab":false},{"c":"古畑ラナ","v":[{"n":"飯田ヒカル","old":false}],"collab":false},{"c":"河駒風ラブ","v":[{"n":"鈴木日菜","old":false}],"collab":false},{"c":"調月リオ","v":[{"n":"Lynn","old":false}],"collab":false},{"c":"薄葉リツ","v":[{"n":"瀬戸桃子","old":false}],"collab":false},{"c":"朱城ルミ","v":[{"n":"青山吉能","old":false}],"collab":false},{"c":"野正レイ","v":[{"n":"稲垣好","old":false}],"collab":false},{"c":"宇沢レイサ","v":[{"n":"根本京里","old":false}],"collab":false},{"c":"鹿山レイジョ","v":[{"n":"菅沼千紗","old":false}],"collab":false},{"c":"衣斐レナ","v":[{"n":"梅澤めぐ","old":false}],"collab":false},{"c":"不破レンゲ","v":[{"n":"小市眞琴","old":false}],"collab":false},{"c":"狐坂ワカモ","v":[{"n":"斎藤千和","old":false}],"collab":false},{"c":"佐天涙子","v":[{"n":"伊藤かな恵","old":false}],"collab":true},{"c":"初音ミク","v":[{"n":"藤田咲","old":false}],"collab":true},{"c":"御坂美琴","v":[{"n":"佐藤利奈","old":false}],"collab":true},{"c":"食蜂操祈","v":[{"n":"浅倉杏美","old":false}],"collab":true}];
+
+const VAR = {"﨑":"崎","髙":"高","圓":"円","邊":"辺","邉":"辺","澤":"沢","齋":"斎","齊":"斎","櫻":"桜","國":"国","學":"学","廣":"広","濱":"浜","嶋":"島"};
+function norm(s){
+  s = (s || "").normalize("NFKC").toLowerCase();
+  s = s.replace(/[\s\u3000・･.\-_'’]/g, "");
+  s = s.replace(/[\u3041-\u3096]/g, c => String.fromCharCode(c.charCodeAt(0) + 96));
+  return Array.from(s).map(c => VAR[c] || c).join("");
+}
+function lev(a, b){
+  const m = a.length, n = b.length;
+  if (Math.abs(m - n) > 1) return 9;
+  const d = Array.from({length: m + 1}, (_, i) => [i]);
+  for (let j = 1; j <= n; j++) d[0][j] = j;
+  for (let i = 1; i <= m; i++) for (let j = 1; j <= n; j++)
+    d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+  return d[m][n];
+}
+
+// 声優ごとにまとめる: 正規化した名前 -> {name, roles:[{c, collab, old}]}
+const ACTORS = new Map();
+for (const r of DATA) for (const v of r.v) {
+  const k = norm(v.n);
+  if (!ACTORS.has(k)) ACTORS.set(k, {name: v.n, roles: []});
+  const roleOld = v.old;
+  ACTORS.get(k).roles.push({c: r.c, collab: r.collab, old: roleOld, now: r.v.filter(x => !x.old).map(x => x.n).join("")});
+}
+
+function cleanToken(t){
+  t = t.replace(/[（(][^）)]*[）)]/g, "");
+  t = t.split(/[:：]/).pop();
+  t = t.replace(/^\s*cv\s*/i, "").trim();
+  const t2 = t.replace(/(さん|氏|様)$/, "");
+  return t2.length >= 2 ? t2 : t;
+}
+function tokenize(raw){
+  const out = [];
+  for (const line of raw.split(/[\n,、，\/／;；]+/)) {
+    const t = cleanToken(line);
+    if (!t) continue;
+    const parts = t.split(/[\s\u3000]+/).filter(Boolean);
+    if (parts.length >= 2 && !ACTORS.has(norm(t))) {
+      // スペースで区切られた複数人: 登録名に合う最長の組み合わせで切り出す
+      const got = []; let i = 0, any = false;
+      while (i < parts.length) {
+        let hit = false;
+        for (let j = parts.length; j > i; j--) {
+          const cand = parts.slice(i, j).join("");
+          if (ACTORS.has(norm(cand))) { got.push(cand); i = j; hit = true; any = true; break; }
+        }
+        if (!hit) { got.push(parts[i]); i++; }
+      }
+      if (any) out.push(...got); else out.push(t);
+    } else out.push(t);
+  }
+  return out;
+}
+function lookup(tok){
+  const n = norm(tok);
+  if (!n) return null;
+  const hit = ACTORS.get(n);
+  if (hit) return {hit, cands: []};
+  const cands = [];
+  for (const [k, a] of ACTORS) {
+    if ((n.length >= 2 && k.length >= 2 && (k.includes(n) || n.includes(k))) || (n.length >= 3 && lev(k, n) <= 1)) cands.push(a);
+  }
+  return {hit: null, cands: cands.slice(0, 4)};
+}
+function verdict(a){
+  const main = a.roles.filter(r => !r.collab && !r.old);
+  const col = a.roles.filter(r => r.collab);
+  const old = a.roles.filter(r => r.old && !r.collab);
+  if (main.length) return "ok";
+  if (old.length) return "old";
+  if (col.length) return "co";
+  return "no";
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const LABEL = {ok:["✅","ブルアカ担当あり"], co:["🟣","コラボ枠のみ"], old:["🕰️","過去に担当(現在は交代)"], no:["❌","リストになし"]};
+
+function roleHtml(a){
+  return a.roles.map(r => {
+    const tag = r.collab ? "他作品コラボ" : r.old ? "旧担当・現在は" + esc(r.now) : "";
+    return "<div>" + esc(r.c) + (tag ? "<span class=\"tag\">(" + tag + ")</span>" : "") + "</div>";
+  }).join("");
+}
+let lastText = "";
+function judge(){
+  const toks = tokenize(document.getElementById("in").value);
+  const out = document.getElementById("out");
+  out.innerHTML = "";
+  const tally = {ok:0, co:0, old:0, no:0};
+  const lines = [];
+  const seen = new Set();
+  const frag = [];
+  for (const tok of toks) {
+    const k = norm(tok);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    const r = lookup(tok);
+    if (!r) continue;
+    if (r.hit) {
+      const v = verdict(r.hit);
+      tally[v]++;
+      frag.push("<div class=\"res " + v + "\"><div class=\"ic\">" + LABEL[v][0] + "</div><div><span class=\"who\">" + esc(r.hit.name) + "</span><span class=\"badge\">" + LABEL[v][1] + "</span><div class=\"chars\">" + roleHtml(r.hit) + "</div></div></div>");
+      lines.push(r.hit.name + " … " + LABEL[v][1] + "(" + r.hit.roles.map(x => x.c).join("、") + ")");
+    } else {
+      tally.no++;
+      const mb = r.cands.length ? "<div class=\"maybe dim\">もしかして: " + r.cands.map(a => "<button class=\"sub\" data-name=\"" + esc(a.name) + "\">" + esc(a.name) + "</button>").join("") + "</div>" : "";
+      frag.push("<div class=\"res no\"><div class=\"ic\">❌</div><div><span class=\"who\">" + esc(tok) + "</span><span class=\"badge\">" + LABEL.no[1] + "</span><div class=\"chars dim\">登録リストに見つかりません(担当していない可能性が高い)。表記ゆれがないかも確認してください。</div>" + mb + "</div></div>");
+      lines.push(tok + " … リストになし");
+    }
+  }
+  if (!frag.length) { out.innerHTML = "<p class=\"dim\">名前を入力してください。</p>"; document.getElementById("cp").hidden = true; return; }
+  const total = frag.length;
+  const head = total > 1 ? "<div class=\"sum\">" + total + "人中 担当あり " + tally.ok + " / コラボのみ " + tally.co + " / 過去担当 " + tally.old + " / リストなし " + tally.no + "</div>" : "";
+  out.innerHTML = head + frag.join("");
+  lastText = lines.join("\n");
+  document.getElementById("cp").hidden = false;
+}
+document.getElementById("go").onclick = judge;
+document.getElementById("clr").onclick = () => { document.getElementById("in").value = ""; document.getElementById("out").innerHTML = ""; document.getElementById("cp").hidden = true; };
+document.getElementById("in").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) judge(); });
+document.getElementById("out").addEventListener("click", e => {
+  const b = e.target.closest("button[data-name]");
+  if (b) { document.getElementById("in").value = b.dataset.name; judge(); }
+});
+document.getElementById("cp").onclick = async () => {
+  try { await navigator.clipboard.writeText(lastText); document.getElementById("cp").textContent = "コピーしました"; setTimeout(() => document.getElementById("cp").textContent = "結果をコピー", 1500); } catch (e) {}
+};
+
+// キャラから調べる
+function charSearch(){
+  const q = norm(document.getElementById("q").value);
+  const out = document.getElementById("qout");
+  if (!q) { out.innerHTML = ""; return; }
+  const hits = DATA.filter(r => norm(r.c).includes(q)).slice(0, 30);
+  out.innerHTML = hits.length ? hits.map(r =>
+    "<div class=\"res ok\"><div class=\"ic\">🎤</div><div><span class=\"who\">" + esc(r.c) + "</span>" + (r.collab ? "<span class=\"badge\" style=\"background:#c79bff;color:#190a2b\">コラボ</span>" : "") +
+    "<div class=\"chars\">" + r.v.map(v => esc(v.n) + (v.old ? "<span class=\"tag\">(旧)</span>" : "")).join(" → ") + "</div></div></div>").join("")
+    : "<p class=\"dim\">見つかりません。</p>";
+}
+document.getElementById("q").addEventListener("input", charSearch);
+
+// タブ
+document.getElementById("tabs").addEventListener("click", e => {
+  const b = e.target.closest("button[data-t]"); if (!b) return;
+  for (const x of document.querySelectorAll("#tabs button")) x.classList.toggle("on", x === b);
+  document.getElementById("pa").hidden = b.dataset.t !== "a";
+  document.getElementById("pb").hidden = b.dataset.t !== "b";
+});
+
+// 全一覧
+document.getElementById("all").innerHTML = DATA.map(r => "<div>" + esc(r.c) + (r.collab ? "(コラボ)" : "") + " … " + r.v.map(v => esc(v.n)).join(" → ") + "</div>").join("");
+</script>
+</body>
+</html>
