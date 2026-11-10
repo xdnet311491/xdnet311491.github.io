@@ -2101,12 +2101,17 @@ def _fk_bar(go: str, title: str) -> str:
             f'<span class="vtitle">{html.escape(title)}</span></div>')
 
 
+# 布教部屋の一番上(部屋の一覧)に出す一言。変えたいときは、この1行の " " の中を書き換える
+FK_HINT = "ボタンを長押ししてみてください(しょぼい機能が見れます（笑）)"
+
+
 def fukyou_html() -> str:
     rooms, _ = _fk_rooms()
     if not rooms:
         return ('<div class="fk-view" id="fk-root"><ul class="list"><li class="empty">'
                 'fukyou.txt に「@部屋 名前 | 画像 | 説明」を書くと、ここに表示されます。</li></ul></div>')
-    views = ['<div class="fk-view" id="fk-root"><ul class="list">'
+    views = ['<div class="fk-view" id="fk-root">'
+             + (f'<p class="fk-intro">{html.escape(FK_HINT)}</p>' if FK_HINT else "") + '<ul class="list">'
              + "".join(_fk_card(f"fk-r{ri}", r["name"], r["desc"], r["img"], r["pos"]) for ri, r in enumerate(rooms))
              + "</ul></div>"]
     for ri, r in enumerate(rooms):
