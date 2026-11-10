@@ -37,10 +37,28 @@ button:disabled{opacity:.45;cursor:default}
 .tools{display:flex;flex-direction:column;gap:.35rem}
 .rec{background:#ff6b81!important;color:#fff!important}
 #st{min-height:1.2em;font-size:.8rem;color:#ffd479;margin:.3rem 0}
+#apilist .tbl{overflow-x:auto;margin:.5rem 0}
+#apilist table{width:100%;border-collapse:collapse;font-size:.82rem}
+#apilist th,#apilist td{border-bottom:1px solid #2c3670;padding:.5rem .4rem;text-align:left;vertical-align:top}
+#apilist th{color:#9fb0ff;font-size:.74rem;white-space:nowrap}
+#apilist td:nth-child(3){white-space:nowrap}
+#apilist button{padding:.3rem .8rem;font-size:.78rem;margin-bottom:.3rem}
+#apilist #apimsg{color:#ffd479;min-height:1.2em}
+.badge{display:inline-block;border-radius:999px;padding:.05rem .55rem;font-size:.72rem;font-weight:700;white-space:nowrap;margin-bottom:.15rem}
+.badge.free{background:#1f5f4a;color:#b6ffdf}
+.badge.paid{background:#5f3a1f;color:#ffd9b0}
 </style>
 </head>
 <body>
 <h1>AIチャット</h1>
+
+<details class="card" id="apilist">
+<summary>APIキーを持っていない人はここ(API一覧)</summary>
+<p class="dim">APIキーは、AIサービスを自分のアカウントで使うための合言葉です。① 下から1つ選ぶ → ② 「キーを作る」から公式サイトに登録して、キーをコピー → ③ すぐ下の「設定」のAPIキー欄に貼り付け、で使えます。まず試すなら <b>Gemini</b> か <b>Groq</b> が手軽です。</p>
+<div class="tbl" id="apitbl"></div>
+<p class="dim" id="apimsg"></p>
+<p class="dim">・無料枠には、回数や量の上限があります。クレジットカードを登録しなければ、課金はされません。<br>・無料枠に入力した内容は、サービス側の改善に使われることがあります。名前・住所・パスワードなどの個人情報は書かないでください。<br>・APIキーは、他人に見せたり、ネットに貼ったりしないでください。漏れたときは、公式サイトで作り直してください。<br>・無料枠の条件は変わります。ここは2026年11月時点の内容なので、登録前に公式ページで確認してください。</p>
+</details>
 
 <details class="card" id="settings" open>
 <summary>設定(最初にここを入れてください)</summary>
@@ -57,6 +75,8 @@ button:disabled{opacity:.45;cursor:default}
 <label class="f"><span></span><span class="row" style="font-size:.8rem"><input type="checkbox" id="save" style="width:auto"> このブラウザに保存する(共用のパソコンではオフのまま) <button class="sub" id="delkey" type="button">キーを消す</button></span></label>
 <label class="f"><span>モデル</span><span class="row" style="flex-wrap:nowrap"><input id="model" list="models" placeholder="例: gemini-3.8-flash"><button class="sub" id="getm" type="button">一覧を取得</button></span></label>
 <datalist id="models"></datalist>
+<label class="f"><span></span><select id="modelsel" hidden></select></label>
+<p class="dim" id="modelmsg" style="color:#ffd479"></p>
 <label class="f"><span>ひらめき度</span><span class="row" style="flex-wrap:nowrap"><input id="temp" type="range" min="0" max="2" step="0.1" value="0.8"><b id="vtemp" style="min-width:2rem">0.8</b></span></label>
 <label class="f"><span>キャラ/指示</span>
   <select id="preset"></select></label>
@@ -91,6 +111,15 @@ const PROV={
   groq:{base:'https://api.groq.com/openai/v1',help:'キーの取得: <a href="https://console.groq.com/keys" target="_blank" rel="noopener">Groq Console</a>。画像を使うときは vision 対応モデルを選んでください',ph:'「一覧を取得」で選べます'},
   custom:{base:'',help:'OpenAI互換のAPI(/chat/completions)なら何でも使えます。API URL の末尾は /v1 など',ph:'モデル名'}
 };
+// API一覧 (「API一覧」の表と、「これを使う」ボタンで使う)。prov=内蔵の選択肢、custom=OpenAI互換で base を自動入力
+const API_LIST=[
+ {prov:'gemini',name:'Google Gemini',note:'画像・音声・動画もOK',money:'free',tag:'無料枠あり',sub:'カード不要',url:'https://aistudio.google.com/apikey'},
+ {prov:'groq',name:'Groq',note:'返事がとても速い',money:'free',tag:'無料枠あり',sub:'カード不要',url:'https://console.groq.com/keys'},
+ {prov:'openrouter',name:'OpenRouter',note:'1つのキーで多くのモデル。名前が :free で終わるものが無料',money:'free',tag:'無料モデルあり',sub:'1日の回数は少なめ',url:'https://openrouter.ai/keys'},
+ {prov:'custom',base:'https://api.mistral.ai/v1',name:'Mistral',note:'フランスのAIサービス',money:'free',tag:'無料枠あり',sub:'電話番号の認証が必要(カード不要)',url:'https://console.mistral.ai/api-keys',help:'キーの取得: <a href="https://console.mistral.ai/api-keys" target="_blank" rel="noopener">Mistral Console</a>。モデル名は「一覧を取得」で選べます'},
+ {prov:'custom',base:'https://api.deepseek.com',name:'DeepSeek',note:'安い従量課金',money:'paid',tag:'有料',sub:'無料枠なし',url:'https://platform.deepseek.com/api_keys',help:'キーの取得: <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">DeepSeek Platform</a>(先にチャージが必要)。モデル名は「一覧を取得」で選べます'},
+ {prov:'custom',base:'https://api.openai.com/v1',name:'OpenAI',note:'ChatGPTのAPI版',money:'paid',tag:'有料',sub:'無料枠なし',url:'https://platform.openai.com/api-keys',help:'キーの取得: <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">OpenAI Platform</a>(先にチャージが必要)。モデル名は「一覧を取得」で選べます'}
+];
 const PRESETS=[
  ['標準','あなたは親切で簡潔なアシスタントです。日本語で、分かりやすく答えてください。'],
  ['ツンデレ','あなたはツンデレな少女です。口では素っ気なく突き放しますが、ちゃんと役に立つ答えを返し、時々照れます。日本語で話してください。'],
@@ -111,7 +140,8 @@ $('key').value=LS.getItem('aichat-key')||SS.getItem('aichat-key')||'';
 function applySettingsToUI(){
   $('prov').value=S.prov;$('base').value=S.base;$('model').value=S.model;$('temp').value=S.temp;$('vtemp').textContent=S.temp;
   $('sys').value=S.sys;$('tts').checked=S.tts;$('save').checked=S.save||!!LS.getItem('aichat-key');
-  $('keyhelp').innerHTML=PROV[S.prov].help;$('model').placeholder=PROV[S.prov].ph;
+  const kn=S.prov==='custom'?API_LIST.find(a=>a.base&&a.base===S.base&&a.help):null;
+  $('keyhelp').innerHTML=kn?kn.help:PROV[S.prov].help;$('model').placeholder=PROV[S.prov].ph;
   $('baseRow').style.display=S.prov==='gemini'?'none':'';
   const i=PRESETS.findIndex(p=>p[1]===S.sys);$('preset').value=i<0?PRESETS.length-1:i;
 }
@@ -124,7 +154,7 @@ function saveSettings(){
 }
 $('prov').onchange=()=>{const p=$('prov').value;S.prov=p;$('base').value=PROV[p].base||'';
   if(p==='gemini')$('model').value='gemini-3.8-flash';else if(p==='groq')$('model').value='llama-3.3-70b-versatile';else $('model').value='';
-$('models').innerHTML='';S.base=$('base').value;S.model=$('model').value;applySettingsToUI();saveSettings()};
+$('models').innerHTML='';$('modelsel').hidden=true;$('modelmsg').textContent='';S.base=$('base').value;S.model=$('model').value;applySettingsToUI();saveSettings()};
 ['base','key','model','tts','save'].forEach(i=>$(i).addEventListener('change',saveSettings));
 $('temp').oninput=()=>{$('vtemp').textContent=$('temp').value;saveSettings()};
 $('sys').oninput=()=>{const i=PRESETS.findIndex(p=>p[1]===$('sys').value);$('preset').value=i<0?PRESETS.length-1:i;saveSettings()};
@@ -137,9 +167,26 @@ $('delkey').onclick=()=>{$('key').value='';saveSettings();status('キーを消�
 if(!S.base&&S.prov!=='gemini')S.base=PROV[S.prov].base||'';
 applySettingsToUI();
 
+// ---------- API一覧 ----------
+$('apitbl').innerHTML='<table><thead><tr><th>サービス</th><th>お金</th><th></th></tr></thead><tbody>'+API_LIST.map((a,i)=>
+  `<tr><td><b>${a.name}</b><br><span class="dim">${a.note}</span></td>`+
+  `<td><span class="badge ${a.money}">${a.tag}</span><br><span class="dim">${a.sub}</span></td>`+
+  `<td><button type="button" class="use" data-i="${i}">これを使う</button><br><a href="${a.url}" target="_blank" rel="noopener">キーを作る ↗</a></td></tr>`).join('')+'</tbody></table>';
+$('apitbl').onclick=e=>{
+  const b=e.target.closest&&e.target.closest('button.use');if(!b)return;
+  const a=API_LIST[+b.dataset.i],before=$('prov').value+'|'+$('base').value;
+  $('prov').value=a.prov;$('prov').onchange();
+  if(a.prov==='custom'){$('base').value=a.base;S.base=a.base;applySettingsToUI();saveSettings()}
+  const same=before===$('prov').value+'|'+$('base').value;
+  $('apimsg').textContent=a.name+' を選びました。「キーを作る」でキーを作って、下の設定のAPIキー欄に貼り付けてください。'+
+    (!same&&$('key').value?' ⚠ 前のサービスのキーが入ったままです。このサービスのキーに入れ替えてください。':'');
+  const st=$('settings');st.open=true;st.scrollIntoView({behavior:'smooth',block:'start'});
+};
+if(!$('key').value)$('apilist').open=true;   // キーが未入力のときは、最初からこの一覧を開いておく
+
 // ---------- 小物 ----------
 function status(t){$('st').textContent=t||''}
-const esc=s=>s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 function md(t){t=esc(t);
   t=t.replace(/```\w*\n?([\s\S]*?)```/g,(m,c)=>'<pre><code>'+c+'</code></pre>');
   t=t.replace(/`([^`\n]+)`/g,'<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>');return t}
@@ -156,7 +203,7 @@ function showChips(){$('chips').innerHTML='';pending.forEach((a,i)=>{const c=doc
 $('chips').onclick=e=>{const i=e.target.dataset&&e.target.dataset.i;if(i!=null){pending.splice(+i,1);showChips()}};
 
 // ---------- 添付 ----------
-const MAXB=15*1024*1024;
+const MAXB=14*1024*1024;
 const b64=blob=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=rej;r.readAsDataURL(blob)});
 async function addFile(f){
   const t=f.type||'';
@@ -168,7 +215,7 @@ async function addFile(f){
       g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);
       pending.push({kind:'image',mime:'image/jpeg',b64:c.toDataURL('image/jpeg',.85).split(',')[1],name:f.name});
     }else if(t.startsWith('audio/')||t.startsWith('video/')){
-      if(f.size>MAXB){status('ファイルが大きすぎます(15MBまで)');return}
+      if(f.size>MAXB){status('ファイルが大きすぎます(14MBまで)。動画は短く撮るか、画質を下げてためしてください');return}
       pending.push({kind:t.startsWith('audio/')?'audio':'video',mime:t,b64:await b64(f),name:f.name});
     }else status('画像・音声・動画のファイルを選んでください');
   }catch(e){status('ファイルを読み込めませんでした')}
@@ -214,8 +261,8 @@ $('dict').onclick=()=>{
 };
 
 // ---------- 通信 ----------
-function lastAttIdx(){ // 添付付きで送るのは新しい方2件だけ (古いものは通信量を減らすため文字だけにする)
-  const idx=[];hist.forEach((m,i)=>{if(m.atts&&m.atts.length)idx.push(i)});return new Set(idx.slice(-2))}
+function lastAttIdx(arr){ // 添付付きで送るのは新しい方2件だけ (古いものは通信量を減らすため文字だけにする)。送る一覧(arr)の中の位置で数える
+  const idx=[];arr.forEach((m,i)=>{if(m.atts&&m.atts.length)idx.push(i)});return new Set(idx.slice(-2))}
 async function readSSE(res,onData){
   const rd=res.body.getReader(),dec=new TextDecoder();let buf='';
   for(;;){const {done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});
@@ -223,11 +270,11 @@ async function readSSE(res,onData){
       if(line.startsWith('data:')){const d=line.slice(5).trim();if(d)onData(d)}}}
 }
 async function failText(res){let t='';try{t=await res.text();const j=JSON.parse(t);t=(j.error&&(j.error.message||JSON.stringify(j.error)))||t}catch(e){}
-  const hint=res.status===401||res.status===403?'(APIキーが違う/権限がない可能性)':res.status===429?'(無料枠の回数制限です。少し待つか、別のモデルを試してください)':res.status===404?'(モデル名かAPI URLが違う可能性)':'';
+  const hint=res.status===401||res.status===403?'(APIキーが違う/権限がない可能性)':res.status===429?'(無料枠の回数制限です。少し待つか、別のモデルを試してください)':res.status===400&&/image|multimodal|vision/i.test(String(t))?'(このモデルは画像に対応していない可能性があります。画像対応のモデルを選んでください)':res.status===404?'(モデル名かAPI URLが違う可能性)':'';
   const gone=/no longer available|not found|is not supported|deprecated|retired/i.test(String(t))?'\n→ このモデルは今は使えません。設定の「一覧を取得」で、いま使えるモデルを選び直してください。':'';
   return `エラー ${res.status} ${hint}\n${String(t).slice(0,400)}${gone}`}
 async function streamGemini(msgs,onDelta,signal){
-  const keep=lastAttIdx(),contents=[];
+  const keep=lastAttIdx(msgs),contents=[];
   msgs.forEach((m,i)=>{const parts=[];let tx=m.text||'';
     if(m.atts&&m.atts.length){if(keep.has(i))m.atts.forEach(a=>parts.push({inlineData:{mimeType:a.mime,data:a.b64}}));else tx+=' [添付ファイルあり]'}
     else if(m.noatt)tx+=' [添付ファイルあり]';
@@ -244,7 +291,7 @@ async function streamGemini(msgs,onDelta,signal){
   if(blocked)onDelta(`\n(安全フィルターで止められました: ${blocked})`);
 }
 async function streamOpenAI(msgs,onDelta,signal){
-  const keep=lastAttIdx(),messages=[];if(S.sys.trim())messages.push({role:'system',content:S.sys});
+  const keep=lastAttIdx(msgs),messages=[];if(S.sys.trim())messages.push({role:'system',content:S.sys});
   msgs.forEach((m,i)=>{
     const imgs=(m.atts||[]).filter(a=>a.kind==='image');
     if(m.role==='user'&&imgs.length&&keep.has(i))
@@ -307,25 +354,34 @@ $('clear').onclick=()=>{if(busy)return;hist=[];saveHist();$('log').innerHTML='';
 
 // ---------- モデル一覧 ----------
 $('getm').onclick=async()=>{
-  saveSettings();const k=$('key').value.trim();if(!k){status('先にAPIキーを入れてください');return}
-  status('モデル一覧を取得中…');
+  const ms=t=>{$('modelmsg').textContent=t;status(t)};   // 結果は設定の中にも出す (下の表示欄は画面の外になりがちなので)
+  saveSettings();const k=$('key').value.trim();if(!k){ms('先にAPIキーを入れてください');return}
+  ms('モデル一覧を取得中…');$('getm').disabled=true;
   try{let ids=[];
     if(S.prov==='gemini'){
       const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':k}});
       if(!r.ok)throw new Error(await failText(r));
-      ids=(await r.json()).models.filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>m.name.replace(/^models\//,''));
+      ids=((await r.json()).models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>m.name.replace(/^models\//,''));
       ids.sort((a,b)=>(/flash/.test(b)-/flash/.test(a))||a.localeCompare(b));
     }else{
       const base=(S.base||PROV[S.prov].base||'').replace(/\/+$/,'');
       const r=await fetch(base+'/models',{headers:{'Authorization':'Bearer '+k}});
       if(!r.ok)throw new Error(await failText(r));
-      ids=(await r.json()).data.map(m=>m.id);ids.sort((a,b)=>(/:free$/.test(b)-/:free$/.test(a))||a.localeCompare(b));
+      const j=await r.json();ids=(j.data||j.models||[]).map(m=>m.id||m.name).filter(Boolean);
+      ids.sort((a,b)=>(/:free$/.test(b)-/:free$/.test(a))||a.localeCompare(b));
     }
-    $('models').innerHTML=ids.map(i=>`<option value="${esc(i)}">`).join('');
-    status(`${ids.length}個のモデルが見つかりました。モデル欄をタップして選べます`+(S.prov==='openrouter'?'(:free が無料)':''));
-    if(!ids.includes($('model').value)){$('model').value='';$('model').focus();}
-  }catch(e){status((e.message||'失敗しました').slice(0,200))}
+    if(!ids.length)throw new Error('モデルが1つも見つかりませんでした。API URLやAPIキーを確かめてください');
+    const q=s=>esc(s).replace(/"/g,'&quot;'),cur=$('model').value;
+    $('models').innerHTML=ids.map(i=>`<option value="${q(i)}">`).join('');
+    const sel=$('modelsel');
+    sel.innerHTML=`<option value="">▼ 見つかったモデル(${ids.length}個)から選ぶ</option>`+ids.map(i=>`<option value="${q(i)}"${i===cur?' selected':''}>${q(i)}</option>`).join('');
+    sel.hidden=false;
+    ms(`${ids.length}個のモデルが見つかりました。すぐ下の「▼」の欄から選べます`+(S.prov==='openrouter'?'(:free が無料)':'')+(ids.includes(cur)?'':`。いまのモデル名「${cur}」はこの一覧にありません。選び直してください`));
+  }catch(e){const m=e.message||'失敗しました';ms(/Failed to fetch|NetworkError|Load failed/i.test(m)?'通信できませんでした。ネットワークやフィルターで止められているか、API URLが違う可能性があります。':m.slice(0,300))}
+  $('getm').disabled=false;
 };
+$('modelsel').onchange=()=>{const v=$('modelsel').value;if(!v)return;$('model').value=v;S.model=v;saveSettings();ms2('モデルを「'+v+'」にしました')};
+function ms2(t){$('modelmsg').textContent=t;status(t)}
 redraw();
 </script>
 </body>
