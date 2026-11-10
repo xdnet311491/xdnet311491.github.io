@@ -30,13 +30,15 @@
     ["8. Our Oath", "op8.mp3", ""],
     ["9. Alkaline tears", "op9.mp3", ""],
     ["10. ﾕｳｶの絆ダイアローグ", "op10.mp3", ""],
-    ["11. 彩りキャンバス", "op11.mp3", ""]
+    ["11. 彩りキャンバス", "op11.mp3", ""],
+    ["12. ほくりくトリップ", "op12.mp3", ""]
   ],
   "op_motions": {
     "op4.mp3": "motion4.mp4",
     "op10.mp3": "motion10.mp4",
     "op11.mp3": "motion11.mp4",
-    "op2.mp3": "motion2.mp4"
+    "op2.mp3": "motion2.mp4",
+    "op12.mp3": "motion12.mp4"
   },
   "visitor_counter": {
       "enabled": true,
