@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AIチャット</title>
+<meta name="description" content="自分のAPIキーでつなぐAIチャット。プロンプト設定・画像/音声/動画の添付・読み上げ対応(Gemini / OpenRouter / Groq)">
+<style>
+:root{color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;padding:1rem;font-family:system-ui,sans-serif;background:#0a0e2a;color:#eef0ff;max-width:760px;margin-inline:auto}
+h1{font-size:1.3rem;margin:.2rem 0 .8rem}
+.card{background:#141a45;border:1px solid #2c3670;border-radius:14px;padding:.7rem 1rem;margin-bottom:.8rem}
+summary{cursor:pointer;font-weight:700;color:#9fb0ff}
+.dim{color:#9fb0ff;font-size:.78rem;line-height:1.5}a{color:#7df3ff}
+label.f{display:grid;grid-template-columns:6.2rem 1fr;gap:.5rem;align-items:center;margin:.45rem 0;font-size:.85rem}
+input,select,textarea{font:inherit;background:#0e1438;color:#eef0ff;border:1px solid #2c3670;border-radius:8px;padding:.4rem .55rem;width:100%}
+textarea{resize:vertical}
+button{font:inherit;font-weight:700;border:0;border-radius:999px;background:#7df3ff;color:#06102a;padding:.5rem 1.1rem;cursor:pointer}
+button.sub{background:#1d2660;color:#cfd6ff;border:1px solid #2c3670}
+button:disabled{opacity:.45;cursor:default}
+.row{display:flex;gap:.5rem;align-items:center;flex-wrap:wrap}
+.log{min-height:14rem;max-height:62vh;overflow-y:auto;display:flex;flex-direction:column;gap:.6rem;padding:.2rem}
+.msg{max-width:92%;padding:.55rem .8rem;border-radius:14px;line-height:1.6;font-size:.92rem;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;-webkit-user-select:text}
+.msg.user{align-self:flex-end;background:#26358f;border-bottom-right-radius:4px}
+.msg.bot{align-self:flex-start;background:#1a2255;border:1px solid #2c3670;border-bottom-left-radius:4px}
+.msg.err{border-color:#a03a4a;color:#ffb3bd}
+.msg img{display:block;max-width:12rem;max-height:9rem;border-radius:8px;margin:.2rem 0}
+.msg pre{margin:.4rem 0;padding:.5rem .7rem;background:#0a0e2a;border-radius:8px;overflow-x:auto;white-space:pre-wrap}
+.msg code{background:#0a0e2a;border-radius:4px;padding:0 .25rem;font-family:ui-monospace,monospace;font-size:.88em}
+.msg pre code{padding:0;background:none}
+.chips{display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0}
+.chip{background:#1d2660;border:1px solid #2c3670;border-radius:999px;padding:.15rem .3rem .15rem .7rem;font-size:.78rem}
+.chip b{cursor:pointer;margin-left:.3rem;padding:0 .3rem}
+.bar{display:flex;gap:.5rem;align-items:flex-end}
+.bar textarea{flex:1;min-height:3rem;max-height:9rem}
+.tools{display:flex;flex-direction:column;gap:.35rem}
+.rec{background:#ff6b81!important;color:#fff!important}
+#st{min-height:1.2em;font-size:.8rem;color:#ffd479;margin:.3rem 0}
+#apilist .tbl{overflow-x:auto;margin:.5rem 0}
+#apilist table{width:100%;border-collapse:collapse;font-size:.82rem}
+#apilist th,#apilist td{border-bottom:1px solid #2c3670;padding:.5rem .4rem;text-align:left;vertical-align:top}
+#apilist th{color:#9fb0ff;font-size:.74rem;white-space:nowrap}
+#apilist td:nth-child(3){white-space:nowrap}
+#apilist button{padding:.3rem .8rem;font-size:.78rem;margin-bottom:.3rem}
+#apilist #apimsg{color:#ffd479;min-height:1.2em}
+.badge{display:inline-block;border-radius:999px;padding:.05rem .55rem;font-size:.72rem;font-weight:700;white-space:nowrap;margin-bottom:.15rem}
+.badge.free{background:#1f5f4a;color:#b6ffdf}
+.badge.paid{background:#5f3a1f;color:#ffd9b0}
+</style>
+</head>
+<body>
+<h1>AIチャット</h1>
+
+<details class="card" id="apilist">
+<summary>APIキーを持っていない人はここ(API一覧)</summary>
+<p class="dim">APIキーは、AIサービスを自分のアカウントで使うための合言葉です。① 下から1つ選ぶ → ② 「キーを作る」から公式サイトに登録して、キーをコピー → ③ すぐ下の「設定」のAPIキー欄に貼り付け、で使えます。まず試すなら <b>Gemini</b> か <b>Groq</b> が手軽です。</p>
+<div class="tbl" id="apitbl"></div>
+<p class="dim" id="apimsg"></p>
+<p class="dim">・無料枠には、回数や量の上限があります。クレジットカードを登録しなければ、課金はされません。<br>・無料枠に入力した内容は、サービス側の改善に使われることがあります。名前・住所・パスワードなどの個人情報は書かないでください。<br>・APIキーは、他人に見せたり、ネットに貼ったりしないでください。漏れたときは、公式サイトで作り直してください。<br>・無料枠の条件は変わります。ここは2026年11月時点の内容なので、登録前に公式ページで確認してください。</p>
+</details>
+
+<details class="card" id="settings" open>
+<summary>設定(最初にここを入れてください)</summary>
+<label class="f"><span>サービス</span>
+  <select id="prov">
+    <option value="gemini">Google Gemini(画像・音声・動画OK / 無料枠あり)</option>
+    <option value="openrouter">OpenRouter(:free のモデルが無料 / 画像は対応モデルのみ)</option>
+    <option value="groq">Groq(高速・無料枠あり / 音声は文字起こし)</option>
+    <option value="custom">OpenAI互換(自分で指定)</option>
+  </select></label>
+<label class="f" id="baseRow"><span>API URL</span><input id="base" placeholder="https://.../v1"></label>
+<label class="f"><span>APIキー</span><span class="row" style="flex-wrap:nowrap"><input id="key" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ここに貼り付け"><button class="sub" id="showkey" type="button">表示</button><button class="sub" id="copykey" type="button">コピー</button></span></label>
+<p class="dim" id="keyhelp"></p>
+<label class="f"><span></span><span class="row" style="font-size:.8rem"><input type="checkbox" id="save" style="width:auto"> このブラウザに保存する(共用のパソコンではオフのまま) <button class="sub" id="delkey" type="button">キーを消す</button></span></label>
+<label class="f"><span>モデル</span><span class="row" style="flex-wrap:nowrap"><input id="model" list="models" placeholder="例: gemini-3.8-flash"><button class="sub" id="getm" type="button">一覧を取得</button></span></label>
+<datalist id="models"></datalist>
+<label class="f"><span></span><select id="modelsel" hidden></select></label>
+<p class="dim" id="modelmsg" style="color:#ffd479"></p>
+<label class="f"><span>ひらめき度</span><span class="row" style="flex-wrap:nowrap"><input id="temp" type="range" min="0" max="2" step="0.1" value="0.8"><b id="vtemp" style="min-width:2rem">0.8</b></span></label>
+<label class="f"><span>キャラ/指示</span>
+  <select id="preset"></select></label>
+<label class="f"><span>プロンプト</span><textarea id="sys" rows="4" placeholder="AIへの最初の指示(システムプロンプト)"></textarea></label>
+<label class="f"><span></span><span class="row" style="font-size:.85rem"><input type="checkbox" id="tts" style="width:auto"> 返事を読み上げる(端末の音声)</span></label>
+<p class="dim">キーは<b>あなたのブラウザから各サービスへ直接</b>送られます。このサイトのリポジトリには保存されず、画像・音声・動画もGitHubには一切アップロードされません。会話の履歴(文字だけ)はこのブラウザにだけ残ります。無料枠には回数制限があり、入力内容がサービス側の改善に使われる場合があります。個人情報は入れないでください。</p>
+</details>
+
+<div class="log" id="log"></div>
+<div class="chips" id="chips"></div>
+<div id="st" role="status" aria-live="polite"></div>
+<div class="bar">
+  <textarea id="in" rows="2" placeholder="メッセージを入力(Ctrl+Enterで送信)"></textarea>
+  <div class="tools">
+    <button id="send" type="button">送信</button>
+    <button id="stop" type="button" class="sub" hidden>停止</button>
+  </div>
+</div>
+<div class="row" style="margin-top:.5rem">
+  <button class="sub" id="attach" type="button">📎 画像/音声/動画</button>
+  <button class="sub" id="rec" type="button">🎤 録音して送る</button>
+  <button class="sub" id="dict" type="button">⌨ 声で入力</button>
+  <button class="sub" id="clear" type="button">会話を消す</button>
+  <input type="file" id="file" accept="image/*,audio/*,video/*" multiple hidden>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const PROV={
+  gemini:{help:'キーの取得: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Google AI Studio</a>(Googleアカウントで無料発行)',ph:'例: gemini-3.8-flash'},
+  openrouter:{base:'https://openrouter.ai/api/v1',help:'キーの取得: <a href="https://openrouter.ai/keys" target="_blank" rel="noopener">OpenRouter</a>。モデル名の末尾が <code>:free</code> のものが無料枠です',ph:'「一覧を取得」で選べます'},
+  groq:{base:'https://api.groq.com/openai/v1',help:'キーの取得: <a href="https://console.groq.com/keys" target="_blank" rel="noopener">Groq Console</a>。画像を使うときは vision 対応モデルを選んでください',ph:'「一覧を取得」で選べます'},
+  custom:{base:'',help:'OpenAI互換のAPI(/chat/completions)なら何でも使えます。API URL の末尾は /v1 など',ph:'モデル名'}
+};
+// API一覧 (「API一覧」の表と、「これを使う」ボタンで使う)。prov=内蔵の選択肢、custom=OpenAI互換で base を自動入力
+const API_LIST=[
+ {prov:'gemini',name:'Google Gemini',note:'画像・音声・動画もOK',money:'free',tag:'無料枠あり',sub:'カード不要',url:'https://aistudio.google.com/apikey'},
+ {prov:'groq',name:'Groq',note:'返事がとても速い',money:'free',tag:'無料枠あり',sub:'カード不要',url:'https://console.groq.com/keys'},
+ {prov:'openrouter',name:'OpenRouter',note:'1つのキーで多くのモデル。名前が :free で終わるものが無料',money:'free',tag:'無料モデルあり',sub:'1日の回数は少なめ',url:'https://openrouter.ai/keys'},
+ {prov:'custom',base:'https://api.mistral.ai/v1',name:'Mistral',note:'フランスのAIサービス',money:'free',tag:'無料枠あり',sub:'電話番号の認証が必要(カード不要)',url:'https://console.mistral.ai/api-keys',help:'キーの取得: <a href="https://console.mistral.ai/api-keys" target="_blank" rel="noopener">Mistral Console</a>。モデル名は「一覧を取得」で選べます'},
+ {prov:'custom',base:'https://api.deepseek.com',name:'DeepSeek',note:'安い従量課金',money:'paid',tag:'有料',sub:'無料枠なし',url:'https://platform.deepseek.com/api_keys',help:'キーの取得: <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">DeepSeek Platform</a>(先にチャージが必要)。モデル名は「一覧を取得」で選べます'},
+ {prov:'custom',base:'https://api.openai.com/v1',name:'OpenAI',note:'ChatGPTのAPI版',money:'paid',tag:'有料',sub:'無料枠なし',url:'https://platform.openai.com/api-keys',help:'キーの取得: <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">OpenAI Platform</a>(先にチャージが必要)。モデル名は「一覧を取得」で選べます'}
+];
+const PRESETS=[
+ ['標準','あなたは親切で簡潔なアシスタントです。日本語で、分かりやすく答えてください。'],
+ ['ツンデレ','あなたはツンデレな少女です。口では素っ気なく突き放しますが、ちゃんと役に立つ答えを返し、時々照れます。日本語で話してください。'],
+ ['関西弁','あなたは陽気な関西のおっちゃんです。関西弁でテンポよく、ツッコミも交えて答えてください。'],
+ ['英会話の先生','あなたは英会話の先生です。ユーザーの英語を自然に直し、短い解説を日本語で添えてから、英語で会話を続けてください。'],
+ ['要約・箇条書き','あなたは要約が得意なアシスタントです。回答は必ず短い箇条書きで、結論を先に書いてください。'],
+ ['カスタム','']
+];
+const LS=localStorage,SS=sessionStorage;
+let S={prov:'gemini',base:'',model:'gemini-3.8-flash',temp:0.8,sys:PRESETS[0][1],tts:false,save:false};
+let hist=[],pending=[],busy=false,ctl=null;
+
+// ---------- 設定 ----------
+PRESETS.forEach(([n],i)=>{const o=document.createElement('option');o.value=i;o.textContent=n;$('preset').appendChild(o)});
+try{Object.assign(S,JSON.parse(LS.getItem('aichat-set')||'{}'));hist=JSON.parse(LS.getItem('aichat-hist')||'[]')}catch(e){}
+if(S.prov==='gemini'&&S.model==='gemini-2.5-flash')S.model='gemini-3.8-flash';   // 旧モデルは新規利用できなくなったため
+$('key').value=LS.getItem('aichat-key')||SS.getItem('aichat-key')||'';
+function applySettingsToUI(){
+  $('prov').value=S.prov;$('base').value=S.base;$('model').value=S.model;$('temp').value=S.temp;$('vtemp').textContent=S.temp;
+  $('sys').value=S.sys;$('tts').checked=S.tts;$('save').checked=S.save||!!LS.getItem('aichat-key');
+  const kn=S.prov==='custom'?API_LIST.find(a=>a.base&&a.base===S.base&&a.help):null;
+  $('keyhelp').innerHTML=kn?kn.help:PROV[S.prov].help;$('model').placeholder=PROV[S.prov].ph;
+  $('baseRow').style.display=S.prov==='gemini'?'none':'';
+  const i=PRESETS.findIndex(p=>p[1]===S.sys);$('preset').value=i<0?PRESETS.length-1:i;
+}
+function saveSettings(){
+  S.prov=$('prov').value;S.base=$('base').value.trim();S.model=$('model').value.trim();S.temp=+$('temp').value;
+  S.sys=$('sys').value;S.tts=$('tts').checked;S.save=$('save').checked;
+  try{LS.setItem('aichat-set',JSON.stringify(S));
+    const k=$('key').value.trim();LS.removeItem('aichat-key');SS.removeItem('aichat-key');
+    if(k)(S.save?LS:SS).setItem('aichat-key',k);}catch(e){}
+}
+$('prov').onchange=()=>{const p=$('prov').value;S.prov=p;$('base').value=PROV[p].base||'';
+  if(p==='gemini')$('model').value='gemini-3.8-flash';else if(p==='groq')$('model').value='llama-3.3-70b-versatile';else $('model').value='';
+$('models').innerHTML='';$('modelsel').hidden=true;$('modelmsg').textContent='';S.base=$('base').value;S.model=$('model').value;applySettingsToUI();saveSettings()};
+['base','key','model','tts','save'].forEach(i=>$(i).addEventListener('change',saveSettings));
+$('temp').oninput=()=>{$('vtemp').textContent=$('temp').value;saveSettings()};
+$('sys').oninput=()=>{const i=PRESETS.findIndex(p=>p[1]===$('sys').value);$('preset').value=i<0?PRESETS.length-1:i;saveSettings()};
+$('preset').onchange=()=>{const p=PRESETS[+$('preset').value];if(p[0]!=='カスタム'){$('sys').value=p[1];saveSettings()}};
+$('showkey').onclick=()=>{const k=$('key'),on=k.type==='password';k.type=on?'text':'password';$('showkey').textContent=on?'隠す':'表示'};
+$('copykey').onclick=async()=>{const v=$('key').value;if(!v){status('キーが入っていません');return}
+  try{await navigator.clipboard.writeText(v)}catch(e){const k=$('key'),t=k.type;k.type='text';k.select();try{document.execCommand('copy')}catch(e2){}k.type=t}
+  status('キーをコピーしました');setTimeout(()=>status(''),1500)};
+$('delkey').onclick=()=>{$('key').value='';saveSettings();status('キーを消しました')};
+if(!S.base&&S.prov!=='gemini')S.base=PROV[S.prov].base||'';
+applySettingsToUI();
+
+// ---------- API一覧 ----------
+$('apitbl').innerHTML='<table><thead><tr><th>サービス</th><th>お金</th><th></th></tr></thead><tbody>'+API_LIST.map((a,i)=>
+  `<tr><td><b>${a.name}</b><br><span class="dim">${a.note}</span></td>`+
+  `<td><span class="badge ${a.money}">${a.tag}</span><br><span class="dim">${a.sub}</span></td>`+
+  `<td><button type="button" class="use" data-i="${i}">これを使う</button><br><a href="${a.url}" target="_blank" rel="noopener">キーを作る ↗</a></td></tr>`).join('')+'</tbody></table>';
+$('apitbl').onclick=e=>{
+  const b=e.target.closest&&e.target.closest('button.use');if(!b)return;
+  const a=API_LIST[+b.dataset.i],before=$('prov').value+'|'+$('base').value;
+  $('prov').value=a.prov;$('prov').onchange();
+  if(a.prov==='custom'){$('base').value=a.base;S.base=a.base;applySettingsToUI();saveSettings()}
+  const same=before===$('prov').value+'|'+$('base').value;
+  $('apimsg').textContent=a.name+' を選びました。「キーを作る」でキーを作って、下の設定のAPIキー欄に貼り付けてください。'+
+    (!same&&$('key').value?' ⚠ 前のサービスのキーが入ったままです。このサービスのキーに入れ替えてください。':'');
+  const st=$('settings');st.open=true;st.scrollIntoView({behavior:'smooth',block:'start'});
+};
+if(!$('key').value)$('apilist').open=true;   // キーが未入力のときは、最初からこの一覧を開いておく
+
+// ---------- 小物 ----------
+function status(t){$('st').textContent=t||''}
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function md(t){t=esc(t);
+  t=t.replace(/```\w*\n?([\s\S]*?)```/g,(m,c)=>'<pre><code>'+c+'</code></pre>');
+  t=t.replace(/`([^`\n]+)`/g,'<code>$1</code>').replace(/\*\*([^*\n]+)\*\*/g,'<b>$1</b>');return t}
+function bubble(role,html){const d=document.createElement('div');d.className='msg '+role;d.innerHTML=html;$('log').appendChild(d);$('log').scrollTop=1e9;return d}
+function renderMsg(m){
+  let h='';(m.atts||[]).forEach(a=>{h+=a.kind==='image'?`<img src="data:${a.mime};base64,${a.b64}" alt="">`:`<div>${a.kind==='audio'?'🎵':'🎬'} ${esc(a.name||a.kind)}</div>`});
+  if(m.noatt)h+='<div class="dim">(添付は保存されていません)</div>';
+  return h+md(m.text||'');
+}
+function redraw(){$('log').innerHTML='';hist.forEach(m=>bubble(m.role==='user'?'user':'bot',renderMsg(m)))}
+function saveHist(){try{LS.setItem('aichat-hist',JSON.stringify(hist.slice(-60).map(m=>({role:m.role,text:m.text,noatt:!!(m.atts&&m.atts.length)||m.noatt}))))}catch(e){}}
+function showChips(){$('chips').innerHTML='';pending.forEach((a,i)=>{const c=document.createElement('span');c.className='chip';
+  c.innerHTML=(a.kind==='image'?'🖼 ':a.kind==='audio'?'🎵 ':'🎬 ')+esc(a.name)+'<b data-i="'+i+'">✕</b>';$('chips').appendChild(c)})}
+$('chips').onclick=e=>{const i=e.target.dataset&&e.target.dataset.i;if(i!=null){pending.splice(+i,1);showChips()}};
+
+// ---------- 添付 ----------
+const MAXB=14*1024*1024;
+const b64=blob=>new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]);r.onerror=rej;r.readAsDataURL(blob)});
+async function addFile(f){
+  const t=f.type||'';
+  try{
+    if(t.startsWith('image/')){
+      const url=URL.createObjectURL(f),im=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url});
+      const k=Math.min(1,1280/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement('canvas');
+      c.width=Math.round(im.naturalWidth*k);c.height=Math.round(im.naturalHeight*k);const g=c.getContext('2d');
+      g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);
+      pending.push({kind:'image',mime:'image/jpeg',b64:c.toDataURL('image/jpeg',.85).split(',')[1],name:f.name});
+    }else if(t.startsWith('audio/')||t.startsWith('video/')){
+      if(f.size>MAXB){status('ファイルが大きすぎます(14MBまで)。動画は短く撮るか、画質を下げてためしてください');return}
+      pending.push({kind:t.startsWith('audio/')?'audio':'video',mime:t,b64:await b64(f),name:f.name});
+    }else status('画像・音声・動画のファイルを選んでください');
+  }catch(e){status('ファイルを読み込めませんでした')}
+  showChips();
+}
+$('attach').onclick=()=>$('file').click();
+$('file').onchange=async e=>{for(const f of e.target.files)await addFile(f);e.target.value=''};
+$('in').addEventListener('paste',async e=>{for(const it of e.clipboardData.items)if(it.type.startsWith('image/')){await addFile(it.getAsFile())}});
+
+// 録音 → 16kHz モノラル WAV (どのAPIでも読める形式)
+let mr=null,chunks=[],rtimer=null;
+function wav(buf){const d=buf.getChannelData(0),n=d.length,o=new DataView(new ArrayBuffer(44+n*2));
+  const W=(p,s)=>{for(let i=0;i<s.length;i++)o.setUint8(p+i,s.charCodeAt(i))};
+  W(0,'RIFF');o.setUint32(4,36+n*2,true);W(8,'WAVEfmt ');o.setUint32(16,16,true);o.setUint16(20,1,true);o.setUint16(22,1,true);
+  o.setUint32(24,16000,true);o.setUint32(28,32000,true);o.setUint16(32,2,true);o.setUint16(34,16,true);W(36,'data');o.setUint32(40,n*2,true);
+  for(let i=0;i<n;i++){const s=Math.max(-1,Math.min(1,d[i]));o.setInt16(44+i*2,s<0?s*0x8000:s*0x7fff,true)}
+  return new Blob([o],{type:'audio/wav'})}
+async function toWav(blob){const ac=new (window.AudioContext||window.webkitAudioContext)();
+  const src=await ac.decodeAudioData(await blob.arrayBuffer());ac.close();
+  const oc=new OfflineAudioContext(1,Math.max(1,Math.ceil(src.duration*16000)),16000),s=oc.createBufferSource();
+  s.buffer=src;s.connect(oc.destination);s.start();return wav(await oc.startRendering())}
+$('rec').onclick=async()=>{
+  if(mr){mr.stop();return}
+  try{const st=await navigator.mediaDevices.getUserMedia({audio:true});chunks=[];mr=new MediaRecorder(st);
+    mr.ondataavailable=e=>chunks.push(e.data);
+    mr.onstop=async()=>{clearTimeout(rtimer);st.getTracks().forEach(t=>t.stop());mr=null;$('rec').classList.remove('rec');$('rec').textContent='🎤 録音して送る';
+      try{const w=await toWav(new Blob(chunks));pending.push({kind:'audio',mime:'audio/wav',b64:await b64(w),name:'録音.wav'});showChips();status('録音を添付しました。送信を押してください')}
+      catch(e){status('録音を変換できませんでした')}};
+    mr.start();$('rec').classList.add('rec');$('rec').textContent='⏹ 録音を止める';status('録音中…(最大2分)');
+    rtimer=setTimeout(()=>mr&&mr.stop(),120000);
+  }catch(e){status('マイクが使えません(許可されていない可能性があります)')}
+};
+// 声で入力 (文字にしてテキスト欄へ)
+let rec2=null;
+$('dict').onclick=()=>{
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){status('この端末のブラウザは音声入力に対応していません');return}
+  if(rec2){rec2.stop();return}
+  rec2=new SR();rec2.lang='ja-JP';rec2.interimResults=true;rec2.continuous=false;const base=$('in').value;
+  rec2.onresult=e=>{let t='';for(const r of e.results)t+=r[0].transcript;$('in').value=base+t};
+  rec2.onend=()=>{rec2=null;$('dict').textContent='⌨ 声で入力'};rec2.onerror=()=>{status('音声入力に失敗しました')};
+  rec2.start();$('dict').textContent='⏹ 聞き取り中…';
+};
+
+// ---------- 通信 ----------
+function lastAttIdx(arr){ // 添付付きで送るのは新しい方2件だけ (古いものは通信量を減らすため文字だけにする)。送る一覧(arr)の中の位置で数える
+  const idx=[];arr.forEach((m,i)=>{if(m.atts&&m.atts.length)idx.push(i)});return new Set(idx.slice(-2))}
+async function readSSE(res,onData){
+  const rd=res.body.getReader(),dec=new TextDecoder();let buf='';
+  for(;;){const {done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});
+    let i;while((i=buf.indexOf('\n'))>=0){const line=buf.slice(0,i).replace(/\r$/,'');buf=buf.slice(i+1);
+      if(line.startsWith('data:')){const d=line.slice(5).trim();if(d)onData(d)}}}
+}
+async function failText(res){let t='';try{t=await res.text();const j=JSON.parse(t);t=(j.error&&(j.error.message||JSON.stringify(j.error)))||t}catch(e){}
+  const hint=res.status===401||res.status===403?'(APIキーが違う/権限がない可能性)':res.status===429?'(無料枠の回数制限です。少し待つか、別のモデルを試してください)':res.status===400&&/image|multimodal|vision/i.test(String(t))?'(このモデルは画像に対応していない可能性があります。画像対応のモデルを選んでください)':res.status===404?'(モデル名かAPI URLが違う可能性)':'';
+  const gone=/no longer available|not found|is not supported|deprecated|retired/i.test(String(t))?'\n→ このモデルは今は使えません。設定の「一覧を取得」で、いま使えるモデルを選び直してください。':'';
+  return `エラー ${res.status} ${hint}\n${String(t).slice(0,400)}${gone}`}
+async function streamGemini(msgs,onDelta,signal){
+  const keep=lastAttIdx(msgs),contents=[];
+  msgs.forEach((m,i)=>{const parts=[];let tx=m.text||'';
+    if(m.atts&&m.atts.length){if(keep.has(i))m.atts.forEach(a=>parts.push({inlineData:{mimeType:a.mime,data:a.b64}}));else tx+=' [添付ファイルあり]'}
+    else if(m.noatt)tx+=' [添付ファイルあり]';
+    parts.push({text:tx||' '});contents.push({role:m.role==='user'?'user':'model',parts})});
+  const body={contents,generationConfig:{temperature:S.temp}};if(S.sys.trim())body.systemInstruction={parts:[{text:S.sys}]};
+  const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(S.model)}:streamGenerateContent?alt=sse`,
+    {method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':$('key').value.trim()},body:JSON.stringify(body),signal});
+  if(!res.ok)throw new Error(await failText(res));
+  let blocked='';
+  await readSSE(res,d=>{try{const j=JSON.parse(d),c=j.candidates&&j.candidates[0];
+    if(c&&c.content&&c.content.parts)c.content.parts.forEach(p=>{if(p.text&&!p.thought)onDelta(p.text)});
+    if(j.promptFeedback&&j.promptFeedback.blockReason)blocked=j.promptFeedback.blockReason;
+    if(c&&c.finishReason==='SAFETY')blocked='SAFETY'}catch(e){}});
+  if(blocked)onDelta(`\n(安全フィルターで止められました: ${blocked})`);
+}
+async function streamOpenAI(msgs,onDelta,signal){
+  const keep=lastAttIdx(msgs),messages=[];if(S.sys.trim())messages.push({role:'system',content:S.sys});
+  msgs.forEach((m,i)=>{
+    const imgs=(m.atts||[]).filter(a=>a.kind==='image');
+    if(m.role==='user'&&imgs.length&&keep.has(i))
+      messages.push({role:'user',content:[{type:'text',text:m.text||'この画像について教えてください'},...imgs.map(a=>({type:'image_url',image_url:{url:`data:${a.mime};base64,${a.b64}`}}))]});
+    else messages.push({role:m.role==='user'?'user':'assistant',content:(m.text||' ')+((m.atts&&m.atts.length)||m.noatt?' [画像を添付]':'')});
+  });
+  const base=(S.base||PROV[S.prov].base||'').replace(/\/+$/,'');
+  const res=await fetch(base+'/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+$('key').value.trim()},
+    body:JSON.stringify({model:S.model,messages,temperature:S.temp,stream:true}),signal});
+  if(!res.ok)throw new Error(await failText(res));
+  await readSSE(res,d=>{if(d==='[DONE]')return;try{const j=JSON.parse(d);if(j.error)throw new Error(j.error.message||'error');
+    const t=j.choices&&j.choices[0]&&j.choices[0].delta&&j.choices[0].delta.content;if(t)onDelta(t)}catch(e){if(e.message&&!/JSON/.test(e.message))throw e}});
+}
+async function transcribe(a,signal){ // OpenAI互換では、音声を文字起こしAPIで文字にしてから送る
+  const base=(S.base||PROV[S.prov].base||'').replace(/\/+$/,''),bin=Uint8Array.from(atob(a.b64),c=>c.charCodeAt(0));
+  const fd=new FormData();fd.append('file',new Blob([bin],{type:a.mime}),a.name||'audio.wav');
+  fd.append('model',S.prov==='groq'?'whisper-large-v3-turbo':'whisper-1');fd.append('language','ja');
+  const res=await fetch(base+'/audio/transcriptions',{method:'POST',headers:{'Authorization':'Bearer '+$('key').value.trim()},body:fd,signal});
+  if(!res.ok)throw new Error('音声の文字起こしに失敗しました。\n'+await failText(res)+'\n(音声はGroqかGeminiで使えます)');
+  return (await res.json()).text||'';
+}
+
+// ---------- 送信 ----------
+async function send(){
+  if(busy)return;const text=$('in').value.trim();if(!text&&!pending.length)return;
+  saveSettings();
+  if(!$('key').value.trim()){status('先に設定でAPIキーを入れてください');$('settings').open=true;return}
+  if(!S.model){status('モデル名を入れてください(「一覧を取得」で選べます)');$('settings').open=true;return}
+  busy=true;$('send').disabled=true;$('stop').hidden=false;ctl=new AbortController();speechSynthesis&&speechSynthesis.cancel();status('');
+  const m={role:'user',text,atts:pending.slice()};pending=[];showChips();$('in').value='';
+  let bot=null,acc='';
+  try{
+    if(S.prov!=='gemini'){
+      if(m.atts.some(a=>a.kind==='video'))throw new Error('動画はGeminiでだけ使えます(設定でサービスを切り替えてください)');
+      for(const a of m.atts.filter(a=>a.kind==='audio')){status('音声を文字にしています…');
+        m.text=(m.text?m.text+'\n':'')+'(音声の文字起こし) '+await transcribe(a,ctl.signal)}
+      m.atts=m.atts.filter(a=>a.kind==='image');if(!m.text)m.text='';
+    }
+    hist.push(m);bubble('user',renderMsg(m));
+    bot=bubble('bot','…');status('考え中…');
+    const msgs=hist.slice(-30);
+    const onDelta=t=>{acc+=t;bot.innerHTML=md(acc);$('log').scrollTop=1e9};
+    if(S.prov==='gemini')await streamGemini(msgs,onDelta,ctl.signal);else await streamOpenAI(msgs,onDelta,ctl.signal);
+    if(!acc)bot.innerHTML='(空の返事でした。モデルを変えて試してください)';
+    hist.push({role:'assistant',text:acc});saveHist();status('');
+    if($('tts').checked&&acc&&window.speechSynthesis){const u=new SpeechSynthesisUtterance(acc.replace(/```[\s\S]*?```/g,'').replace(/[*`#]/g,''));u.lang='ja-JP';speechSynthesis.speak(u)}
+  }catch(e){
+    if(e.name==='AbortError'){if(bot){if(acc){hist.push({role:'assistant',text:acc});saveHist()}else bot.remove()}status('止めました');}
+    else{const msg=e.message||String(e);if(bot&&!acc)bot.remove();
+      else if(bot&&acc){hist.push({role:'assistant',text:acc});saveHist()}
+      if(hist.length&&hist[hist.length-1]===m)hist.pop();   // 失敗した質問は履歴から外す (文字は入力欄へ戻す)
+      if(!$('in').value)$('in').value=m.text||'';
+      bubble('bot err',esc(/Failed to fetch|NetworkError|Load failed/i.test(msg)?'通信できませんでした。ネットワークやフィルターで止められているか、API URLが違う可能性があります。':msg));status('')}
+  }
+  busy=false;$('send').disabled=false;$('stop').hidden=true;ctl=null;
+}
+$('send').onclick=send;$('stop').onclick=()=>{ctl&&ctl.abort();speechSynthesis&&speechSynthesis.cancel()};
+$('in').addEventListener('keydown',e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();send()}});
+$('clear').onclick=()=>{if(busy)return;hist=[];saveHist();$('log').innerHTML='';status('会話を消しました')};
+
+// ---------- モデル一覧 ----------
+$('getm').onclick=async()=>{
+  const ms=t=>{$('modelmsg').textContent=t;status(t)};   // 結果は設定の中にも出す (下の表示欄は画面の外になりがちなので)
+  saveSettings();const k=$('key').value.trim();if(!k){ms('先にAPIキーを入れてください');return}
+  ms('モデル一覧を取得中…');$('getm').disabled=true;
+  try{let ids=[];
+    if(S.prov==='gemini'){
+      const r=await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200',{headers:{'x-goog-api-key':k}});
+      if(!r.ok)throw new Error(await failText(r));
+      ids=((await r.json()).models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes('generateContent')).map(m=>m.name.replace(/^models\//,''));
+      ids.sort((a,b)=>(/flash/.test(b)-/flash/.test(a))||a.localeCompare(b));
+    }else{
+      const base=(S.base||PROV[S.prov].base||'').replace(/\/+$/,'');
+      const r=await fetch(base+'/models',{headers:{'Authorization':'Bearer '+k}});
+      if(!r.ok)throw new Error(await failText(r));
+      const j=await r.json();ids=(j.data||j.models||[]).map(m=>m.id||m.name).filter(Boolean);
+      ids.sort((a,b)=>(/:free$/.test(b)-/:free$/.test(a))||a.localeCompare(b));
+    }
+    if(!ids.length)throw new Error('モデルが1つも見つかりませんでした。API URLやAPIキーを確かめてください');
+    const q=s=>esc(s).replace(/"/g,'&quot;'),cur=$('model').value;
+    $('models').innerHTML=ids.map(i=>`<option value="${q(i)}">`).join('');
+    const sel=$('modelsel');
+    sel.innerHTML=`<option value="">▼ 見つかったモデル(${ids.length}個)から選ぶ</option>`+ids.map(i=>`<option value="${q(i)}"${i===cur?' selected':''}>${q(i)}</option>`).join('');
+    sel.hidden=false;
+    ms(`${ids.length}個のモデルが見つかりました。すぐ下の「▼」の欄から選べます`+(S.prov==='openrouter'?'(:free が無料)':'')+(ids.includes(cur)?'':`。いまのモデル名「${cur}」はこの一覧にありません。選び直してください`));
+  }catch(e){const m=e.message||'失敗しました';ms(/Failed to fetch|NetworkError|Load failed/i.test(m)?'通信できませんでした。ネットワークやフィルターで止められているか、API URLが違う可能性があります。':m.slice(0,300))}
+  $('getm').disabled=false;
+};
+$('modelsel').onchange=()=>{const v=$('modelsel').value;if(!v)return;$('model').value=v;S.model=v;saveSettings();ms2('モデルを「'+v+'」にしました')};
+function ms2(t){$('modelmsg').textContent=t;status(t)}
+redraw();
+</script>
+</body>
+</html>

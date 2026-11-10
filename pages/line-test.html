@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>回線テスト</title>
+<meta name="description" content="ping・ジッター・ダウンロード/アップロード速度をブラウザだけで測る">
+<style>
+:root{color-scheme:dark}
+body{margin:0;padding:1.2rem;font-family:system-ui,sans-serif;background:#0a0e2a;color:#eef0ff;max-width:640px;margin-inline:auto}
+a{color:#7df3ff}h1{font-size:1.3rem;margin:.2rem 0 1rem}
+.card{background:#141a45;border:1px solid #2c3670;border-radius:14px;padding:.9rem 1.1rem;margin-bottom:.8rem}
+.card h2{font-size:.9rem;margin:0 0 .4rem;color:#9fb0ff}
+.big{font-size:2rem;font-weight:700;font-variant-numeric:tabular-nums}.big small{font-size:.9rem;font-weight:400;color:#9fb0ff}
+.row{display:flex;gap:1rem;flex-wrap:wrap;font-size:.9rem;color:#c9d0ff}
+button{font:inherit;font-weight:700;padding:.7rem 2rem;border:0;border-radius:999px;background:#7df3ff;color:#06102a;cursor:pointer}
+button:disabled{opacity:.5}#msg{margin:.6rem 0;color:#ffd479;min-height:1.4em}.dim{color:#9fb0ff;font-size:.8rem}
+</style>
+</head>
+<body>
+<h1>回線テスト</h1>
+<p><button id="go">測定スタート</button></p>
+<p id="msg"></p>
+<div class="card"><h2>Ping(Cloudflare)</h2><div class="big" id="p1">-<small> ms</small></div><div class="row" id="p1d"></div></div>
+<div class="card"><h2>Ping(このサイト・GitHub Pages)</h2><div class="big" id="p2">-<small> ms</small></div><div class="row" id="p2d"></div></div>
+<div class="card"><h2>ダウンロード</h2><div class="big" id="dl">-<small> Mbps</small></div></div>
+<div class="card"><h2>アップロード</h2><div class="big" id="ul">-<small> Mbps</small></div></div>
+<div class="card"><h2>この端末が知っている回線情報</h2><div class="row" id="nc">-</div></div>
+<p class="dim">ブラウザからの測定なので目安です。測定中は約10〜20MBほど通信します(モバイル回線では注意)。</p>
+<p id="bk"><a href="../">サイトに戻る</a></p>
+<script>
+const $=s=>document.getElementById(s),CF='https://speed.cloudflare.com/',sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const set=(id,v)=>{$(id).firstChild.nodeValue=v};
+async function ping(url,id,n=20){
+  const t=[];let lost=0;
+  for(let i=0;i<=n;i++){                      // 0回目は接続の確立が入るので捨てる
+    const c=new AbortController(),to=setTimeout(()=>c.abort(),3000),s=performance.now();
+    try{await (await fetch(url+(url.includes('?')?'&':'?')+'r='+Math.random(),{cache:'no-store',signal:c.signal})).arrayBuffer();if(i)t.push(performance.now()-s)}
+    catch(e){if(i)lost++}
+    clearTimeout(to);await sleep(80);
+  }
+  if(!t.length){set(id,'×');$(id+'d').textContent='応答なし';return}
+  const avg=t.reduce((a,b)=>a+b)/t.length,jit=t.slice(1).reduce((a,v,i)=>a+Math.abs(v-t[i]),0)/Math.max(1,t.length-1);
+  set(id,avg.toFixed(0));
+  $(id+'d').textContent=`最小 ${Math.min(...t).toFixed(0)} / 最大 ${Math.max(...t).toFixed(0)} ms ・ ジッター ${jit.toFixed(1)} ms ・ 損失 ${lost}/${n}`;
+  return avg;
+}
+async function down(){
+  const c=new AbortController(),to=setTimeout(()=>c.abort(),8000);
+  let got=0,t0=0,sec=0;
+  try{
+    const rd=(await fetch(CF+'__down?bytes=60000000&r='+Math.random(),{cache:'no-store',signal:c.signal})).body.getReader();
+    for(;;){const {done,value}=await rd.read();if(done)break;
+      if(!t0){t0=performance.now();continue}
+      got+=value.length;sec=(performance.now()-t0)/1000;if(sec>.3)set('dl',(got*8/sec/1e6).toFixed(1))}
+  }catch(e){}
+  clearTimeout(to);
+  if(sec>.3)set('dl',(got*8/sec/1e6).toFixed(1));else set('dl','×');
+}
+async function up(){
+  const c=new AbortController(),to=setTimeout(()=>c.abort(),12000),s=performance.now(),size=5e6;
+  try{await fetch(CF+'__up',{method:'POST',body:new Blob([new Uint8Array(size)]),signal:c.signal});
+    set('ul',(size*8/((performance.now()-s)/1000)/1e6).toFixed(1))}
+  catch(e){set('ul','×')}
+  clearTimeout(to);
+}
+$('go').onclick=async()=>{
+  const b=$('go');b.disabled=true;
+  for(const id of['p1','p2','dl','ul'])set(id,'…');
+  $('msg').textContent='Pingを測っています…';
+  const a=await ping(CF+'__down?bytes=0','p1');
+  await ping(new URL('../version.json',location.href).href,'p2');
+  $('msg').textContent='ダウンロードを測っています…';await down();
+  $('msg').textContent='アップロードを測っています…';await up();
+  $('msg').textContent=a==null?'Cloudflareに届きませんでした(広告ブロッカー等の影響かも)':a<30?'かなり快適。ゲームも配信もいけます':a<80?'普通。ふだん使いなら問題なし':'遅め。対戦ゲームだとラグを感じるかも';
+  b.disabled=false;
+};
+const n=navigator.connection;
+$('nc').textContent=n?[n.type&&'種類 '+n.type,n.effectiveType&&'体感 '+n.effectiveType,n.downlink&&'推定 '+n.downlink+' Mbps',n.rtt!=null&&'RTT '+n.rtt+' ms',n.saveData&&'データ節約 ON'].filter(Boolean).join(' ・ '):'このブラウザでは取得できません(Chrome系のみ)';
+if(top!==self)document.getElementById('bk').hidden=true;
+</script>
+</body>
+</html>
