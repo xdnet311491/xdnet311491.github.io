@@ -169,6 +169,9 @@ OP_MOTIONS = {
 }
 OP_MOTION_BLUR = 6     # 背景動画のぼかし (px)。0 でぼかしなし。大きいほどぼける
 OP_MOTION_VEIL = 0.25  # 動画の上にかぶせる白さ (0〜1)。ロゴや文字が見にくいときは上げる
+# 動画と曲の「ずれ」の微調整 (秒)。動画と曲は同時に頭から始まり、再生中もずれたら自動で直します。
+#   それでも「動画が少し遅い」と感じたらプラス (例 0.05)、「早い」と感じたらマイナス (例 -0.05) にします。
+OP_MOTION_OFFSET = 0.0
 
 # ======================================================================
 # ★ 曲・壁紙・特殊モーションの一覧は「site_data.json」に分けてあります
@@ -1098,6 +1101,13 @@ SOUND_JS = r"""
       if (p && p.then) p.then(() => { t.el.pause(); t.el.currentTime = 0; }).catch(() => {});
     }
 
+    // prime と同じことをして、終わったら解決する Promise を返す版
+    function primeP(t) {
+      const p = t.el.play();
+      if (!p || !p.then) return Promise.resolve();
+      return p.then(() => { t.el.pause(); try { t.el.currentTime = 0; } catch (e) { /* まだ読み込み中 */ } }).catch(() => {});
+    }
+
     // ---- オープニング曲の選択 (選んだ曲は端末に覚えておく) ----
     const songs = songBtns.filter((b) => !b.disabled).map((b) => ({ id: b.dataset.id, src: b.dataset.src }));
     let chosen = null;
@@ -1150,40 +1160,104 @@ SOUND_JS = r"""
       mToggle.textContent = motionOn ? 'ON' : 'OFF';
     }
 
-    // いま選ばれている曲に合わせて、背景動画を出す/消す。動画が再生できる状態になったら解決する Promise を返す
-    function applyMotion() {
-      if (!gate || !mVid) return Promise.resolve();
+    // ---- 動画と曲を「同時に」頭から始める ----
+    // 以前は曲が先に鳴り、動画は読み込みが終わってから始まっていたので、動画のサイズぶんだけ遅れていた。
+    // いまは「動画も曲も再生できる状態」になるまで待ち、同じ瞬間に両方を頭から再生する。
+    // さらに再生中も 0.4 秒ごとに見張って、曲を基準に動画のずれを直す (読み込みで一瞬止まったときなど)。
+    const mOffset = Number(cfg.motionOffset) || 0;
+    let syncTimer = 0;
+    function stopSync() { clearInterval(syncTimer); syncTimer = 0; }
+    function keepSync(t) {
+      stopSync();
+      if (!t || !mVid) return;
+      const check = () => {
+        if (mVid.paused || t.el.paused || !isFinite(mVid.duration) || mVid.duration <= 0) return;
+        const want = (t.el.currentTime + mOffset) % mVid.duration;
+        let diff = mVid.currentTime - want;
+        if (diff > mVid.duration / 2) diff -= mVid.duration;   // ループの継ぎ目は近い方で比べる
+        if (diff < -mVid.duration / 2) diff += mVid.duration;
+        if (Math.abs(diff) > 0.12) { try { mVid.currentTime = want; } catch (e) { /* まだ読み込み中 */ } }
+      };
+      setTimeout(check, 200);
+      syncTimer = setInterval(check, 400);
+    }
+
+    const motionSrc = () => {
       const cur = pick();
-      const src = motionOn && !reduceMotion && cur ? (motions[cur.id] || '') : '';
+      return motionOn && !reduceMotion && cur ? (motions[cur.id] || '') : '';
+    };
+
+    // 背景動画の読み込みを始めて、「最後まで再生できる」状態 (または時間切れ) で解決する
+    function prepareVideo(src) {
+      return new Promise((resolve) => {
+        if (mVid.dataset.cur === src && mVid.readyState >= 3) { resolve(); return; }
+        if (mVid.dataset.cur !== src) { mVid.dataset.cur = src; mVid.preload = 'auto'; mVid.src = src; mVid.load(); }
+        let fin = false;
+        const done = () => { if (fin) return; fin = true; clearTimeout(soft); resolve(); };
+        const soft = setTimeout(done, 9000);  // 重すぎるときは、待たずに先へ進む
+        mVid.addEventListener('canplaythrough', done, { once: true });
+        mVid.addEventListener('error', done, { once: true });
+      });
+    }
+
+    // 音の準備ができるのを待つ (t.el が再生できる状態になる / 時間切れ)
+    function prepareAudio(t) {
+      return new Promise((resolve) => {
+        if (!t || t.el.readyState >= 3) { resolve(); return; }
+        const done = () => { clearTimeout(soft); resolve(); };
+        const soft = setTimeout(done, 9000);
+        t.el.addEventListener('canplay', done, { once: true });
+        t.el.addEventListener('error', done, { once: true });
+      });
+    }
+
+    // OP画面を始める。t = 一緒に鳴らす曲 (無ければ動画だけ)。fromStart=false のときは、曲の今の位置に動画を合わせる
+    // 動画が設定されていない曲のときは、白背景にして、曲だけを今まで通り鳴らす。
+    // 戻り値: 動画が再生できる状態になったら解決する Promise (LOAD_JS が待つ)
+    function openOp(t, vol, fadeSec, fromStart, gatePrimed) {
+      if (!gate || !mVid) { if (t) start(t, vol, fadeSec); return Promise.resolve(); }
+      const src = motionSrc();
       if (!src) {
+        stopSync();
         gate.classList.remove('has-motion');  // 白背景に戻る (消えきってから動画を止める)
         setTimeout(() => { if (!gate.classList.contains('has-motion')) mVid.pause(); }, 900);
+        if (t) start(t, vol, fadeSec);
         return Promise.resolve();
       }
       return new Promise((resolve) => {
-        let fin = false;
-        const ok = () => { if (fin) return; fin = true; clearTimeout(tm); resolve(); };
-        const tm = setTimeout(ok, 12000);  // 重すぎるときは、待たずに先へ進む
-        const go = () => {
-          try { mVid.currentTime = 0; } catch (e) { /* まだ読み込み中 */ }
-          const p = mVid.play();
-          const show = () => { gate.classList.add('has-motion'); ok(); };
-          if (p && p.then) p.then(show, ok); else show();
+        let began = false;
+        const begin = () => {
+          if (began) return;
+          began = true;
+          clearTimeout(cap);
+          if (enter && enter.checked) { resolve(); return; }  // もう入場してしまったなら、何もしない
+          const keepPos = !fromStart && t && !t.el.paused;
+          try { mVid.currentTime = keepPos ? ((t.el.currentTime + mOffset) % (mVid.duration || 1e9)) : 0; } catch (e) { /* まだ読み込み中 */ }
+          if (t && fromStart) { try { t.el.currentTime = 0; } catch (e) { /* まだ読み込み中 */ } }
+          // ↓ この2行を同じ瞬間に実行するのが肝心 (間に待ちを入れない)
+          const pv = mVid.play();
+          if (t && !keepPos) start(t, vol, fadeSec); else if (t) fade(t, vol, fadeSec);
+          gate.classList.add('has-motion');
+          keepSync(t);
+          if (pv && pv.catch) pv.catch(() => {});
+          resolve();
         };
-        if (mVid.dataset.cur === src && mVid.readyState >= 3) { go(); return; }
-        if (mVid.dataset.cur !== src) { mVid.dataset.cur = src; mVid.src = src; mVid.load(); }
-        mVid.addEventListener('canplay', go, { once: true });
-        mVid.addEventListener('error', ok, { once: true });
+        const cap = setTimeout(begin, 12000);  // 何があっても、これ以上は待たない
+        Promise.all([prepareVideo(src), gatePrimed || prepareAudio(t)]).then(begin, begin);
       });
     }
+
+    // 曲を使わず、動画だけ出す/消す (音楽OFFのとき)
+    function applyMotion() { return openOp(null, 0, 0, true, null); }
 
     if (enter) {
       enter.addEventListener('change', () => {
         if (enter.checked) {
           // 入場したら、見えなくなってから動画を止める (電池と通信の節約)
+          stopSync();
           setTimeout(() => { if (enter.checked && mVid) mVid.pause(); }, 900);
-        } else {
-          applyMotion();  // OP画面に戻ったら、いま選んでいる曲に合わせて出し直す
+        } else if (!(musicOn && (opTrack || pick()))) {
+          applyMotion();  // 音楽を使わないときは、動画だけ出し直す (曲を鳴らすときは、下の処理が曲と同時に始める)
         }
       });
     }
@@ -1233,11 +1307,11 @@ SOUND_JS = r"""
       if (decided) return;
       decided = true;
       musicOn = on;
-      window.__motionReady = applyMotion();
-      if (on) {
-        initTracks(true);
-        if (opTrack) start(opTrack, opVol, cfg.opFadeIn);
-      }
+      if (on) initTracks(true);
+      // 動画付きの曲は、動画も曲も準備ができてから同時に始める (曲だけ先に鳴らさない)。
+      // iPhone 対策: 「はい」を押した瞬間に曲を一度だけ再生して止めておく。その完了が「曲の準備OK」の合図にもなる
+      const primed = (on && opTrack && motionSrc()) ? primeP(opTrack) : null;
+      window.__motionReady = openOp(on ? opTrack : null, opVol, cfg.opFadeIn, true, primed);
       syncToggle();
       perm.classList.add('gone');
       setTimeout(unlock, 520);  // 暗い画面が消えてから、OPアニメと読み込み待ちが始まる
@@ -1251,7 +1325,7 @@ SOUND_JS = r"""
       if (!opTrack && s) { opTrack = makeTrack(s.src, true); opTrack.id = s.id; }
       if (!opTrack) return;
       try { opTrack.el.currentTime = 0; } catch (e) { /* まだ読み込み中 */ }
-      start(opTrack, opVol, cfg.opFadeIn);
+      openOp(opTrack, opVol, cfg.opFadeIn, true, null);  // 動画付きの曲なら、動画と同時に頭から
     }
     if (enter) {
       enter.addEventListener('change', () => {
@@ -1263,7 +1337,7 @@ SOUND_JS = r"""
           if (mainTrack) start(mainTrack, mainVol, cfg.mainFadeIn);
         } else {
           stopPreview(false);
-          if (unified && opTrack) { start(opTrack, opVol, cfg.opFadeIn); return; }
+          if (unified && opTrack) { openOp(opTrack, opVol, cfg.opFadeIn, false, null); return; }  // 曲は続きのまま、動画を曲の位置に合わせる
           if (mainTrack) {
             fade(mainTrack, 0, cfg.opFadeOut, () => {
               mainTrack.el.pause();
@@ -1286,7 +1360,7 @@ SOUND_JS = r"""
           musicOn = true;
           initTracks(false);
           if (enter && enter.checked) { const b = bgm(); if (b) start(b, mainVol, 1.2); }
-          else if (opTrack) start(opTrack, opVol, cfg.opFadeIn);
+          else if (opTrack) openOp(opTrack, opVol, cfg.opFadeIn, true, null);
         }
         syncToggle();
       });
@@ -2535,6 +2609,7 @@ def sound_cfg_json() -> str:
         "cursorSrc": cursor_src(),
         "cursorVolume": CURSOR_VOLUME,
         "motions": motion_map(),
+        "motionOffset": float(OP_MOTION_OFFSET),
     }
     return json.dumps(cfg, ensure_ascii=False).replace("</", "<\\/")
 
