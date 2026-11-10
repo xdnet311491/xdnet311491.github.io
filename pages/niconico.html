@@ -39,6 +39,7 @@ button{font:inherit;cursor:pointer}
 .boom{flex:1 1 12rem;font-weight:900;font-size:1.25rem;letter-spacing:.06em;padding:.8rem 1.2rem;border:0;border-radius:999px;color:#fff;
   background:linear-gradient(180deg,#ff7a3a,#e02a1a);box-shadow:0 4px 0 #8c1408,0 0 24px rgba(255,90,30,.35);transition:transform .08s,box-shadow .08s,filter .2s}
 .boom:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 #8c1408,0 0 24px rgba(255,90,30,.35)}
+.boom{touch-action:manipulation;-webkit-user-select:none;user-select:none}
 .boom:disabled{filter:grayscale(.7) brightness(.7);cursor:default}
 .sub{font-weight:700;padding:.55rem 1rem;border-radius:999px;border:1px solid #2c3670;background:#1d2660;color:#cfd6ff}
 .sub[aria-pressed="false"]{opacity:.6}
@@ -97,7 +98,7 @@ button{font:inherit;cursor:pointer}
   const STORE_KEY = 'niconico-explosions';          // 自分の履歴を端末に覚えるときの名前
   const SND_KEY = 'niconico-sound';
   const MAX_SAVE = 200, MAX_SHOW = 30;              // 保存する件数 / 画面に出す件数
-  const FUSE_MS = 700;                              // ボタンを押してから爆発するまで
+  const MAX_VOICES = 12;                            // 同時に鳴らす爆発音の上限 (連打しても重くならないように)
   const RUINS_MS = 3200;                            // 爆発してから再建が始まるまで
   // ========================================
 
@@ -106,7 +107,7 @@ button{font:inherit;cursor:pointer}
   const msg = $('msg'), boom = $('boom'), snd = $('snd'), note = $('note');
   const cx = cv.getContext('2d');
   const RM = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
-  let busy = false, soundOn = true, actx = null;
+  let soundOn = true, actx = null;
 
   // ---------- 画像が無いときの代わり絵 ----------
   const PLACEHOLDER = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(
@@ -134,30 +135,39 @@ button{font:inherit;cursor:pointer}
   });
   syncSnd();
 
+  let master = null, noiseBuf = null, voices = 0;
   function ensureAudio() {   // ボタンを押した瞬間に呼ぶ (ブラウザの自動再生ルール対策)
     if (!soundOn) return;
     try {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
-      if (!actx) actx = new AC();
+      if (!actx) {
+        actx = new AC();
+        const comp = actx.createDynamicsCompressor();   // 連打で音が重なっても割れないように
+        comp.threshold.value = -14; comp.ratio.value = 8; comp.attack.value = 0.003; comp.release.value = 0.12;
+        master = actx.createGain(); master.gain.value = 0.9;
+        master.connect(comp); comp.connect(actx.destination);
+        const n = Math.floor(actx.sampleRate * 2.4), b = actx.createBuffer(1, n, actx.sampleRate), d = b.getChannelData(0);
+        for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;   // 爆風のノイズ (1回だけ作って使い回す)
+        noiseBuf = b;
+      }
       if (actx.state === 'suspended') actx.resume().catch(() => {});
-    } catch (e) { actx = null; }
+    } catch (e) { actx = null; master = null; }
   }
   function boomSound() {
-    if (!soundOn || !actx) return;
+    if (!soundOn || !actx || !master || !noiseBuf || voices >= MAX_VOICES) return;
     try {
-      const t = actx.currentTime, dur = 2.4, rate = actx.sampleRate, len = Math.floor(rate * dur);
-      const buf = actx.createBuffer(1, len, rate), d = buf.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.2);   // ざーっという爆風のノイズ
-      const src = actx.createBufferSource(); src.buffer = buf;
+      const t = actx.currentTime, dur = 2.4;
+      const src = actx.createBufferSource(); src.buffer = noiseBuf;                                   // ざーっという爆風のノイズ
       const lp = actx.createBiquadFilter(); lp.type = 'lowpass';
       lp.frequency.setValueAtTime(6000, t); lp.frequency.exponentialRampToValueAtTime(110, t + dur);
       const g = actx.createGain(); g.gain.setValueAtTime(0.9, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-      src.connect(lp); lp.connect(g); g.connect(actx.destination); src.start(t);
+      src.connect(lp); lp.connect(g); g.connect(master); src.start(t, 0, dur);
       const o = actx.createOscillator(); o.type = 'sine';                                              // どすんという低音
       o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(26, t + 0.8);
       const og = actx.createGain(); og.gain.setValueAtTime(1, t); og.gain.exponentialRampToValueAtTime(0.001, t + 1.0);
-      o.connect(og); og.connect(actx.destination); o.start(t); o.stop(t + 1.1);
+      o.connect(og); og.connect(master); o.start(t); o.stop(t + 1.1);
+      voices++; src.onended = () => { voices = Math.max(0, voices - 1); };
     } catch (e) { /* 鳴らせなくても爆発はする */ }
   }
 
@@ -186,6 +196,7 @@ button{font:inherit;cursor:pointer}
     }
     rings.push({ x, y, age: 0, life: 0.7, max: Math.max(W, H) * 0.85 });
     rings.push({ x, y, age: 0, life: 1.0, max: Math.max(W, H) * 0.55 });
+    if (parts.length > 900) parts.splice(0, parts.length - 900);   // 連打しても重くならないように
     kick();
   }
   function kick() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(loop); } }
@@ -258,12 +269,14 @@ button{font:inherit;cursor:pointer}
       ], { duration: D, easing: 'cubic-bezier(.15,.7,.35,1)', fill: 'forwards' });
     }
   }
+  let shk = null;
   function shake(ms, amp) {
     if (RM) return;
     const kf = [{ transform: 'translate(0,0)' }];
     for (let i = 1; i <= 14; i++) { const d = 1 - i / 15; kf.push({ transform: `translate(${rnd(-amp, amp) * d}px,${rnd(-amp, amp) * d}px)` }); }
     kf.push({ transform: 'translate(0,0)' });
-    anim(stage, kf, { duration: ms, easing: 'linear' });
+    if (shk) shk.cancel();
+    shk = anim(stage, kf, { duration: ms, easing: 'linear' });
   }
 
   // ---------- 爆発された歴 ----------
@@ -315,19 +328,12 @@ button{font:inherit;cursor:pointer}
   }
 
   // ---------- 本編 ----------
-  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  async function explode() {
-    if (busy) return;
-    busy = true; boom.disabled = true;
+  // 押すたびに爆発する。爆発の途中でも、再建の途中でも、押したらすぐ次の爆発 (連打OK)
+  let tRuin = 0, tEnd = 0, tDone = 0;
+  function explode() {
     ensureAudio();
-    msg.textContent = '';
-    stage.classList.remove('rebuild', 'ruined', 'gone');
-    stage.classList.add('fuse');
-    msg.textContent = '…ピッ…ピッ…';
-    await sleep(RM ? 300 : FUSE_MS);
-
-    // ---- 爆発 ----
-    stage.classList.remove('fuse');
+    clearTimeout(tRuin); clearTimeout(tEnd); clearTimeout(tDone);
+    stage.classList.remove('rebuild', 'ruined');
     fit();
     const r = hq.getBoundingClientRect(), s = stage.getBoundingClientRect();
     const ox = r.left - s.left + r.width * 0.5, oy = r.top - s.top + r.height * 0.58;
@@ -346,21 +352,18 @@ button{font:inherit;cursor:pointer}
     globalCall('hit');
     msg.textContent = `💥 ニコニコ本社は爆発しました (${total.toLocaleString('ja-JP')}回目)` + (saved ? '' : ' ※この端末では履歴を保存できません');
 
-    // ---- 焼け跡 → 再建 ----
-    await sleep(RM ? 800 : 1700);
-    stage.classList.add('ruined');
-    await sleep(Math.max(300, RUINS_MS - (RM ? 800 : 1700)));
-    debris.textContent = '';
-    msg.textContent = '🏗 ニコニコ本社を再建しました';
-    stage.classList.remove('gone', 'ruined');
-    stage.classList.add('rebuild');
-    await sleep(1400);
-    stage.classList.remove('rebuild');
-    msg.textContent = '';
-    boom.disabled = false; busy = false;
+    // ---- 焼け跡 → 再建 (最後に押してから進む。途中で押されたら、また最初から) ----
+    tRuin = setTimeout(() => stage.classList.add('ruined'), RM ? 800 : 1700);
+    tEnd = setTimeout(() => {
+      debris.textContent = '';
+      msg.textContent = '🏗 ニコニコ本社を再建しました';
+      stage.classList.remove('gone', 'ruined');
+      stage.classList.add('rebuild');
+      tDone = setTimeout(() => { stage.classList.remove('rebuild'); msg.textContent = ''; }, 1400);
+    }, RUINS_MS);
   }
   boom.addEventListener('click', explode);
-  window.addEventListener('resize', () => { if (!busy) fit(); });
+  window.addEventListener('resize', fit);
 
   render();
   fit();

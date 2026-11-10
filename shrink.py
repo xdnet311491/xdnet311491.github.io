@@ -16,7 +16,10 @@ siryou の中の「全部のファイル」を軽くするスクリプト (リ�
 
 固まりにくくするための工夫:
   ・もう軽いファイルは、重い変換をする前に調べて飛ばす (中身を見るだけなので一瞬)
-  ・いちど確認したファイルは .shrink_done.json に覚えて、次回から飛ばす (2回目以降はほぼ一瞬)
+  ・いちど確認したファイルは .shrink_done.json に覚えて、次回から二度と調べない (2回目以降はほぼ一瞬)
+      「軽くなった」「ほとんど軽くならない」「変換に失敗した・時間切れ」のどれでも覚える。
+      1ファイル終わるたびに保存するので、途中で止めても (Ctrl+C) ここまでの結果は消えない。
+      判定は「ファイル名 + サイズ」だけ (更新日時は見ない)。同じ名前で中身を差し替えたらサイズが変わるので、自動で調べ直す。
   ・音楽と画像は、いくつか同時に処理する。動画は1本ずつ、進み具合(%)を表示しながら処理する
   ・ffmpeg は「PCの動作が重くならない優先度」で動かし、CPU を1つ空けておく。止まったままにならないよう時間切れもある
   ・動画の変換は preset medium (slow より数倍速い。サイズはほとんど変わらない)
@@ -166,6 +169,14 @@ def stamp(f: Path, kind: str) -> list:
     return [st.st_size, st.st_mtime_ns, kind]
 
 
+def is_done(rec, f: Path) -> bool:
+    """いちど確認したファイルか? 名前とサイズだけで決める (更新日時や種類の判定が変わっても、もう調べ直さない)"""
+    try:
+        return bool(rec) and rec[0] == f.stat().st_size
+    except (OSError, TypeError, IndexError):
+        return False
+
+
 # ---------- 変換 ----------
 def encode_audio(src: Path, dst: Path) -> bool:
     """音楽を MP3_KBPS で再エンコードする (拡張子・形式はそのまま)"""
@@ -266,7 +277,7 @@ def work(f: Path, kind: str, info) -> tuple:
         ok = encode_video(f, out, WALL_MAX_H, WALL_CRF, (info or {}).get("dur", 0), f.name)
     if not ok:
         out.unlink(missing_ok=True)
-        return size, size, "⚠ 変換に失敗したので触らない (時間切れの可能性)", False
+        return size, size, "⚠ 変換できなかった (時間切れなど) ので触らない。今後は飛ばします", True
     if out.stat().st_size > size * (1 - MIN_GAIN):
         out.unlink(missing_ok=True)
         return size, size, "ほとんど軽くならないので触らない", True
@@ -322,7 +333,7 @@ def main() -> None:
             note = "触らない (保護)"
         elif kind == "other":
             note = "対応していない形式なので触らない"
-        elif cache.get(f.name) == stamp(f, kind):
+        elif is_done(cache.get(f.name), f):
             note = "前回確認済みなので飛ばす"
         elif kind == "image" and size <= IMG_SKIP_BELOW:
             note = "もう軽いので触らない"
@@ -346,6 +357,9 @@ def main() -> None:
         else:
             todo.append((f, kind, info))
 
+    if not args.dry:
+        save_cache(new_cache)   # 「もう軽い」と分かったぶんは、重い変換の前に保存しておく
+
     # ---- 2. 変換が要るものを処理する。音楽・画像は同時に、動画は1本ずつ進み具合を出しながら ----
     if todo and not args.dry:
         small = [t for t in todo if t[1] in ("audio", "image")]
@@ -354,12 +368,17 @@ def main() -> None:
 
         results = {}
 
+        def remember(f, kind, res):   # 1ファイル終わるたびに記録して保存する
+            if res[3]:
+                new_cache[f.name] = stamp(f, kind)
+                save_cache(new_cache)
+
         def safe(f, kind, info):
             try:
                 return work(f, kind, info)
             except Exception as e:  # 1つ失敗しても、ほかは続ける
                 size = f.stat().st_size
-                return size, size, f"⚠ エラーで触らない ({e})", False
+                return size, size, f"⚠ エラーで触らない ({e})。今後は飛ばします", True
 
         if small:
             with ThreadPoolExecutor(max_workers=POOL) as ex:
@@ -368,14 +387,13 @@ def main() -> None:
                     f, kind = futs[fu]
                     results[f.name] = fu.result()
                     row(f.name, kind, results[f.name][0], results[f.name][1], results[f.name][2])
+                    remember(f, kind, results[f.name])
         for f, kind, info in videos:
             results[f.name] = safe(f, kind, info)
             row(f.name, kind, results[f.name][0], results[f.name][1], results[f.name][2])
+            remember(f, kind, results[f.name])
         for f, kind, _info in todo:
-            _orig, new_size, _note, record = results[f.name]
-            after += new_size
-            if record:
-                new_cache[f.name] = stamp(f, kind)
+            after += results[f.name][1]
     elif todo:
         for f, kind, _info in todo:
             after += f.stat().st_size
@@ -390,4 +408,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        shutil.rmtree(TMP, ignore_errors=True)   # 途中の一時ファイルを片付ける
+        print("\n中断しました。ここまでに終わったファイルの結果は記録済みです (次回は続きから)。")
